@@ -24,17 +24,21 @@
     --scrim: rgba(0, 0, 0, .45);
     --font: -apple-system, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #101216; --fg: #eceff4; --muted: #a2a9b5; --card: #1a1d24; --chip: #2a2e38;
-      --line: rgba(162, 169, 181, .28); --accent: #2a75c5; --on-accent: #ffffff; --link: #7db8f0;
-      --danger: #ff7b72; --badge-bg: #4a3a0e; --badge-fg: #ffd88a; --scrim: rgba(0, 0, 0, .6);
-      color-scheme: dark;
-    }
-  }
   :root[data-theme="dark"] {
     --bg: #101216; --fg: #eceff4; --muted: #a2a9b5; --card: #1a1d24; --chip: #2a2e38;
     --line: rgba(162, 169, 181, .28); --accent: #2a75c5; --on-accent: #ffffff; --link: #7db8f0;
+    --danger: #ff7b72; --badge-bg: #4a3a0e; --badge-fg: #ffd88a; --scrim: rgba(0, 0, 0, .6);
+    color-scheme: dark;
+  }
+  :root[data-theme="red"] {
+    --bg: #170f10; --fg: #f6eceb; --muted: #b9a2a0; --card: #251719; --chip: #3a2326;
+    --line: rgba(185, 162, 160, .28); --accent: #d32f2f; --on-accent: #ffffff; --link: #ff8a80;
+    --danger: #ffab91; --badge-bg: #4a3a0e; --badge-fg: #ffd88a; --scrim: rgba(0, 0, 0, .6);
+    color-scheme: dark;
+  }
+  :root[data-theme="blue"] {
+    --bg: #0b1426; --fg: #e8eefb; --muted: #9fb0cc; --card: #14213b; --chip: #1f2f50;
+    --line: rgba(159, 176, 204, .28); --accent: #2563c9; --on-accent: #ffffff; --link: #8fc1ff;
     --danger: #ff7b72; --badge-bg: #4a3a0e; --badge-fg: #ffd88a; --scrim: rgba(0, 0, 0, .6);
     color-scheme: dark;
   }
@@ -163,6 +167,10 @@
                  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
   .tabs button.on { color: var(--link); font-weight: 600; }
 
+  .opt { width: 100%; min-height: 56px; margin-bottom: 8px; padding: 8px 12px; border: 2px solid transparent; border-radius: 14px; text-align: left;
+         background: var(--card); color: var(--fg); display: flex; align-items: center; gap: 12px; font-weight: 600; }
+  .opt.on { border-color: var(--accent); }
+  .sw { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line); }
   .dlg { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--scrim); }
   .dlg[hidden] { display: none; }
   .dlg-box { width: 100%; max-width: 340px; padding: 18px; border-radius: 16px; background: var(--bg); color: var(--fg); }
@@ -180,6 +188,7 @@
   <button data-tab="diary" class="on"></button>
   <button data-tab="history"></button>
   <button data-tab="progress"></button>
+  <button data-tab="settings"></button>
 </div></nav>
 <div id="dlg" class="dlg" hidden>
   <div class="dlg-box" role="dialog" aria-modal="true" aria-labelledby="dlg-msg">
@@ -216,13 +225,62 @@ const saveApp = persist;
 const saveSession = persist;
 const dropSession = persist;
 
+/* ---- стартовые тренировки и история из скриншотов (один раз) ---- */
+const SEED_WORKOUTS = [
+  ["Грудь", ["Жим лежа", "Сведения рук в кроссовере", "Жим гантелей на наклонной скамье"]],
+  ["Спина+бицепс", ["Подтягивания", "Тяга нижнего блока", "Тяга верхнего блока", "Бицепс в кроссовере", "Молотки"]],
+  ["Плечи+трицепс", ["Жим гантелей", "Французский жим", "Махи гантелей", "Разгибания в кроссовере", "Шраги"]],
+  ["Ноги", ["Присед", "Жим наклонной платформы", "Разгибания", "Сгибания", "Икроножные"]],
+];
+// [тренировка, дата, минут, [[упражнение, подходов, вес, повторы], ...]]
+const E_ = {
+  sq: "Присед", lp: "Жим наклонной платформы", le: "Разгибания", lc: "Сгибания", cr: "Икроножные",
+  pu: "Подтягивания", sr: "Тяга нижнего блока", lat: "Тяга верхнего блока", ic: "Сгибания на наклонной скамье",
+  hm: "Молотки", bc: "Бицепс в кроссовере", bo: "Тяга штанги в наклоне",
+  bp: "Жим лежа", cx: "Сведения рук в кроссовере", db: "Жим гантелей на наклонной скамье", wr: "Сгибания запястий",
+  oh: "Жим гантелей", sk: "Французский жим", lr: "Махи гантелей", rf: "Разведения гантелей в наклоне", te: "Разгибания в кроссовере", sh: "Шраги",
+};
+const SEED_HISTORY = [
+  ["Спина+бицепс", "2026-10-05", 116, [[E_.pu, 4, 10, 10], [E_.sr, 4, 52, 12], [E_.lat, 3, 66, 10], [E_.ic, 3, 30, 8], [E_.ic, 3, 14, 6], [E_.hm, 3, 16, 13]]],
+  ["Ноги", "2026-10-06", 87, [[E_.sq, 4, 70, 12], [E_.lp, 4, 120, 12], [E_.le, 3, 54, 13], [E_.lc, 4, 41, 13], [E_.cr, 3, 20, 25]]],
+  ["Плечи+трицепс", "2026-10-08", 129, [[E_.oh, 4, 18, 9], [E_.sk, 4, 25, 14], [E_.lr, 4, 12, 15], [E_.rf, 4, 32, 11], [E_.wr, 3, 40, 50]]],
+  ["Грудь", "2026-10-09", 79, [[E_.bp, 4, 75, 8], [E_.cx, 4, 13.6, 12], [E_.db, 5, 18, 11], [E_.wr, 2, 50, 9]]],
+  ["Спина+бицепс", "2026-10-13", 87, [[E_.pu, 4, 10, 10], [E_.bo, 3, 20, 12], [E_.sr, 3, 52, 11], [E_.lat, 3, 59, 10], [E_.ic, 4, 14, 10], [E_.hm, 3, 14, 12]]],
+  ["Плечи+трицепс", "2026-10-15", 116, [[E_.oh, 4, 18, 12], [E_.sk, 4, 30, 12], [E_.lr, 4, 12, 12], [E_.sh, 4, 51.3, 15], [E_.wr, 3, 40, 50]]],
+  ["Ноги", "2026-10-16", 80, [[E_.sq, 4, 80, 12], [E_.lp, 4, 120, 12], [E_.le, 3, 57.4, 14], [E_.lc, 3, 45, 12], [E_.cr, 2, 30, 15]]],
+  ["Грудь", "2026-10-19", 53, [[E_.bp, 4, 75, 8], [E_.cx, 4, 15.9, 10], [E_.db, 4, 20, 10]]],
+  ["Спина+бицепс", "2026-10-20", 87, [[E_.pu, 4, 10, 10], [E_.sr, 3, 52, 14], [E_.lat, 3, 59, 10], [E_.ic, 2, 14, 9], [E_.bc, 2, 18, 12], [E_.hm, 3, 14, 12]]],
+  ["Плечи+трицепс", "2026-10-22", 97, [[E_.oh, 4, 51.3, 9], [E_.sk, 4, 30, 12], [E_.lr, 4, 14, 12], [E_.te, 3, 6.8, 11], [E_.sh, 4, 61.3, 16]]],
+  ["Ноги", "2026-10-23", 76, [[E_.sq, 4, 70, 12], [E_.lp, 4, 120, 12], [E_.le, 3, 54, 13], [E_.lc, 3, 45, 12], [E_.cr, 3, 30, 25]]],
+];
+function seedData() {
+  if (D.seed1) return;
+  for (const [name, exs] of SEED_WORKOUTS) {
+    if (!D.workouts.some(w => !w.archived && w.name === name))
+      D.workouts.push({ id: uid8(), name, exercises: exs.map(n => ({ name: n, photo: null })), archived: false });
+  }
+  for (const [wname, day, mins, rows] of SEED_HISTORY) {
+    const w = D.workouts.find(x => !x.archived && x.name === wname);
+    const [y, m, d] = day.split("-").map(Number);
+    const start = new Date(y, m - 1, d, 12, 0).getTime();
+    const sets = [], exercises = [];
+    for (const [ex, n, weight, reps] of rows) {
+      if (!exercises.some(e => e.name === ex)) exercises.push({ name: ex, photo: null });
+      for (let i = 0; i < n; i++) sets.push({ id: uid8(), exercise: ex, weight, reps });
+    }
+    D.sessions.push({ id: uid8(), workoutId: w ? w.id : null, name: wname, day, startedAt: start, finishedAt: start + mins * 60000, exercises, sets, imported: true });
+  }
+  D.seed1 = true;
+}
+
 async function initStore() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) { const d = JSON.parse(raw); D.workouts = d.workouts || []; D.bodyweight = d.bodyweight || []; D.sessions = d.sessions || []; }
+    if (raw) { const d = JSON.parse(raw); D.workouts = d.workouts || []; D.bodyweight = d.bodyweight || []; D.sessions = d.sessions || []; D.seed1 = !!d.seed1; }
     localStorage.setItem(KEY + "-t", "1"); localStorage.removeItem(KEY + "-t");
     P.mode = "local";
-  } catch (e) { P.mode = "memory"; }
+    seedData(); persist();
+  } catch (e) { P.mode = "memory"; seedData(); }
 }
 
 /* ---- поиск по данным ---- */
@@ -385,7 +443,7 @@ function history() {
     }
     if (s.finishedAt != null) {
       out.push({
-        id: s.id, name: s.name, day: s.day, started_at: Math.floor(s.startedAt / 1000),
+        id: s.id, name: s.name, day: s.day, imported: !!s.imported, started_at: Math.floor(s.startedAt / 1000),
         duration: Math.round((s.finishedAt - s.startedAt) / 1000), volume: round1(volume), sets: nSets, records: nRec, exercises: exs,
       });
     }
@@ -525,12 +583,14 @@ const ICON = {
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"/>', trend: '<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>',
   trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H4v1a3 3 0 0 0 4 3M16 6h4v1a3 3 0 0 1-4 3M12 13v4M8 20h8M10 17h4"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9L7 7M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>',
   chart: '<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>',
 };
 const icon = (n, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]}</svg>`;
 $(".tabs [data-tab=diary]").innerHTML = icon("list", 22) + "Дневник";
 $(".tabs [data-tab=history]").innerHTML = icon("history", 22) + "История";
 $(".tabs [data-tab=progress]").innerHTML = icon("trend", 22) + "Прогресс";
+$(".tabs [data-tab=settings]").innerHTML = icon("gear", 22) + "Настройки";
 
 async function loadWorkouts() { S.workouts = await api("/workouts"); }
 async function loadCatalog() { S.catalog = await api("/exercises"); }
@@ -734,13 +794,35 @@ function viewHistory() {
   if (!S.hist.length) return memWarn() + '<h2>История</h2><div class="card empty">Здесь появятся завершённые тренировки.<br>Начни первую на вкладке «Дневник».</div>';
   return memWarn() + "<h2>История тренировок</h2>" + S.hist.map(s =>
     `<article class="card"><div class="hs-top"><div><div class="b" style="font-size:18px">${esc(s.name)}</div>` +
-    `<div class="sub">${fmtDay(s.day)}, ${fmtClock(s.started_at)}</div></div>` +
+    `<div class="sub">${fmtDay(s.day)}${s.imported ? "" : ", " + fmtClock(s.started_at)}</div></div>` +
     (s.records ? `<span class="badge">${icon("trophy", 14)}${s.records} ${plural(s.records, RECS)}</span>` : "") + `</div>` +
     `<div class="meta"><span>${icon("clock", 16)}${fmtMin(s.duration)}</span><span>Объём ${fmtNum(s.volume)} кг</span><span>${s.sets} ${plural(s.sets, SETS)}</span></div>` +
     s.exercises.map(e =>
       `<div class="hx"><div class="hx-n">${esc(e.name)}${recBadges(e.records)}</div>` +
       `<div class="hx-s">${e.sets.map(x => (x.weight ? fmtNum(x.weight) + "×" + x.reps : x.reps + " повт.")).join(" · ")}</div></div>`).join("") +
     `</article>`).join("");
+}
+
+/* ---------- Настройки ---------- */
+const THEMES = [["classic", "Классическое", "#ffffff"], ["dark", "Тёмное", "#101216"], ["red", "Красное", "#d32f2f"], ["blue", "Синее", "#2563c9"]];
+let theme = "classic";
+try { const t = localStorage.getItem("gym-theme"); if (THEMES.some(x => x[0] === t)) theme = t; } catch (e) {}
+function applyTheme() {
+  if (theme === "classic") document.documentElement.removeAttribute("data-theme"); else document.documentElement.dataset.theme = theme;
+}
+applyTheme();
+function viewSettings() {
+  const cur = THEMES.find(x => x[0] === theme);
+  let h = memWarn() + "<h2>Настройки</h2>" +
+    `<button class="wcard" style="min-height:64px" data-act="theme-open"><span class="sw" style="background:${cur[2]}"></span>` +
+    `<span style="flex:1;min-width:0"><span class="t" style="display:block;font-size:16px">Оформление</span><span class="x" style="display:block">${cur[1]}</span></span>${icon("right")}</button>`;
+  if (S.themeSheet) {
+    h += '<div class="scrim" data-act="theme-close"></div><div class="sheet" role="dialog" aria-label="Оформление"><div class="sheet-in"><div class="grab"></div>' +
+      '<div class="sheet-h" style="margin-bottom:8px"><div class="h1">Оформление</div><button class="link" data-act="theme-close">Закрыть</button></div>' +
+      THEMES.map(([k, l, c]) => `<button class="opt ${k === theme ? "on" : ""}" data-act="theme" data-t="${k}" aria-pressed="${k === theme}"><span class="sw" style="background:${c}"></span><span style="flex:1">${l}</span>${k === theme ? icon("check") : ""}</button>`).join("") +
+      "</div></div>";
+  }
+  return h;
 }
 
 /* ---------- Прогресс ---------- */
@@ -836,7 +918,7 @@ async function calc() {
 /* ---------- отрисовка ---------- */
 function render() {
   if (S.view === "session" && !S.session) S.view = "list";
-  const key = [S.tab, S.view, S.sheet || "", S.zoom ? "z" : ""].join(":");
+  const key = [S.tab, S.view, S.sheet || "", S.zoom ? "z" : "", S.themeSheet ? "t" : ""].join(":");
   const y = key === S.lastKey ? window.scrollY : 0;
   S.lastKey = key;
   let h;
@@ -844,6 +926,7 @@ function render() {
     h = { list: viewList, edit: viewEdit, pick: viewPick, session: viewSession }[S.view]();
     if (S.view === "list" && S.sheet) h += viewSheet();
   } else if (S.tab === "history") h = viewHistory();
+  else if (S.tab === "settings") h = viewSettings();
   else h = viewProgress();
   if (S.zoom) h += `<div class="scrim zoom" data-act="unzoom"><img src="${esc(S.zoom)}" alt="Фото упражнения"></div>`;
   app.innerHTML = h;
@@ -859,7 +942,7 @@ function goBack() {
   render();
 }
 async function showTab(t) {
-  S.tab = t; S.sheet = null; S.zoom = null;
+  S.tab = t; S.sheet = null; S.zoom = null; S.themeSheet = false;
   try {
     if (t === "history") await loadHistory();
     if (t === "progress") {
@@ -876,6 +959,13 @@ document.querySelectorAll(".tabs button").forEach(b => { b.onclick = () => showT
 /* ---------- действия ---------- */
 const nextName = () => { const L = "АБВГДЕЖЗИК"; const n = (S.workouts || []).length; return "Тренировка " + (L[n] || n + 1); };
 const actions = {
+  "theme-open": () => { S.themeSheet = true; render(); },
+  "theme-close": () => { S.themeSheet = false; render(); },
+  theme: b => {
+    theme = b.dataset.t; applyTheme();
+    try { localStorage.setItem("gym-theme", theme); } catch (e) {}
+    S.themeSheet = false; render();
+  },
   back: () => goBack(),
   zoom: b => { S.zoom = b.dataset.src; render(); },
   unzoom: () => { S.zoom = null; render(); },
@@ -997,8 +1087,6 @@ try {
   const tg = window.Telegram && Telegram.WebApp;
   if (tg) {
     tg.ready(); tg.expand();
-    if (tg.colorScheme) document.documentElement.dataset.theme = tg.colorScheme;
-    tg.onEvent && tg.onEvent("themeChanged", () => { document.documentElement.dataset.theme = tg.colorScheme; if (S.tab === "progress") drawProgressChart(); });
   }
 } catch (e) {}
 
