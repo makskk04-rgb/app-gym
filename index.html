@@ -78,6 +78,12 @@
     --day-bg: #d02a2f; --chk: #d02a2f; --chk-r: 2px; --excard: #241012; --tile: #241012; --input: #1a0a0b;
     --hero-bg: repeating-linear-gradient(135deg, #c42227 0 14px, #b81e23 14px 28px); --hero-pad: 14px; --hero-fg: #ffffff;
   }
+  :root[data-theme="sage"] {
+    --bg: #f4efe3; --fg: #1f2a1f; --muted: #6f7d6c; --card: #fbf8ef; --chip: #e2e6d3; --line: rgba(31,42,31,.14);
+    --accent: #4a7c4f; --on-accent: #ffffff; --link: #35683c; --danger: #b3402f;
+    --font: "Manrope", -apple-system, system-ui, sans-serif; --disp: "Manrope", -apple-system, system-ui, sans-serif; --disp-w: 800;
+    --r-card: 20px; --r-btn: 16px; --r-day: 14px; --tile: #e9efe0; --excard: #fbf8ef; --input: #ffffff;
+  }
   :root[data-theme="rose"] {
     --bg: #fbeff0; --fg: #2b1519; --muted: #8e6d73; --card: #fff7f7; --chip: #f3dcdf; --line: rgba(43,21,25,.12);
     --accent: #b5324f; --on-accent: #ffffff; --link: #a02a45; --danger: #a02a45;
@@ -292,6 +298,39 @@
   .bigv b { font-family: var(--disp); font-weight: var(--disp-w); font-size: 34px; line-height: 1; font-variant-numeric: tabular-nums; }
   .bigv span { font-size: 14px; font-weight: 600; }
   .bigv .up { color: #1e8e3e; } .bigv .down { color: var(--danger); } .bigv .flat { color: var(--muted); }
+
+  .ringcard { display: flex; align-items: center; gap: 14px; padding: 14px; margin-bottom: 10px; border-radius: var(--r-card); background: var(--tile, var(--card)); }
+  .rwrap { position: relative; flex: none; width: 136px; height: 136px; }
+  .rmid { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; line-height: 1.15; }
+  .rmid b { font-family: var(--disp); font-weight: var(--disp-w); font-size: 30px; font-variant-numeric: tabular-nums; }
+  .rmid span { font-size: 12px; color: var(--muted); }
+  .rbars { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+  .mrow .mtop { display: flex; justify-content: space-between; gap: 6px; font-size: 13px; color: var(--muted); }
+  .mrow .mtop b { color: var(--fg); font-variant-numeric: tabular-nums; }
+  .mbar { height: 7px; border-radius: 4px; background: var(--chip); overflow: hidden; }
+  .mbar i { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+  .mrow .mbar { margin-top: 4px; }
+  .meal { margin-bottom: 10px; padding: 10px 12px; border-radius: var(--r-card); background: var(--card); }
+  .mh { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+  .mh b { font-size: 16px; }
+  .mh .mi { color: var(--accent); display: flex; }
+  .mh .mk { margin-left: auto; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .addc { flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: flex; align-items: center; justify-content: center; }
+  .mitem { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); }
+  .mitem .g { flex: 1; min-width: 0; }
+  .mitem .n { font-weight: 600; overflow-wrap: anywhere; }
+  .mitem.rec { padding: 10px 12px; margin-bottom: 8px; border: 0; border-radius: var(--r-card); background: var(--card); }
+  .wrow { width: 100%; margin-top: 8px; min-height: 56px; padding: 8px 12px; border: 0; border-radius: var(--r-card); background: var(--card); color: var(--fg); text-align: left; display: flex; align-items: center; gap: 8px; }
+  .wrow .g { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .wrow .n { font-weight: 700; }
+  .wrow .link2 { color: var(--link); font-weight: 600; font-size: 14px; }
+  .bgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; margin-top: 10px; }
+  .gl { display: grid; grid-template-columns: 70px 1fr auto; gap: 8px; align-items: baseline; padding: 5px 0; border-top: 1px solid var(--line); font-size: 14px; font-variant-numeric: tabular-nums; }
+  .gl span:first-child { color: var(--muted); }
+  .up { color: #1e8e3e; } .down { color: var(--danger); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chipv { padding: 4px 10px; border-radius: 999px; background: var(--chip); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .chipv i { font-style: normal; font-weight: 700; }
   .dlg { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--scrim); }
   .dlg[hidden] { display: none; }
   .dlg-box { width: 100%; max-width: 340px; padding: 18px; border-radius: 16px; background: var(--bg); color: var(--fg); }
@@ -1074,7 +1113,7 @@ async function hChange(t) {
 }
 
 /* ---------- Настройки ---------- */
-const THEMES = [["classic", "Классическое", "#ffffff"], ["dark", "Тёмное", "#101216"], ["red", "Красное", "#d32f2f"], ["blue", "Синее", "#2563c9"], ["contrast", "Контраст", "#111111"], ["night", "Ночь", "#e03a3a"], ["brutal", "Брутал", "#a81d22"], ["rose", "Роза", "#b5324f"]];
+const THEMES = [["classic", "Классическое", "#ffffff"], ["dark", "Тёмное", "#101216"], ["red", "Красное", "#d32f2f"], ["blue", "Синее", "#2563c9"], ["contrast", "Контраст", "#111111"], ["night", "Ночь", "#e03a3a"], ["brutal", "Брутал", "#a81d22"], ["rose", "Роза", "#b5324f"], ["sage", "Зелёное", "#4a7c4f"]];
 let theme = "classic";
 try { const t = localStorage.getItem("gym-theme"); if (THEMES.some(x => x[0] === t)) theme = t; } catch (e) {}
 function applyTheme() {
@@ -1246,7 +1285,7 @@ document.addEventListener("pointercancel", () => { dragging = false; });
 /* ---------- отрисовка ---------- */
 function render() {
   if (S.view === "session" && !S.session) S.view = "list";
-  const key = [S.tab, S.view, S.sheet || "", S.zoom ? "z" : "", S.themeSheet ? "t" : "", S.hedit || "", S.wmenu || "", S.dayKey || "", S.kv, S.kvp ? (S.kvp.sel ? "s" : S.kvp.scan ? "c" : S.kvp.manual ? "m" : "p") : ""].join(":");
+  const key = [S.tab, S.view, S.sheet || "", S.zoom ? "z" : "", S.themeSheet ? "t" : "", S.hedit || "", S.wmenu || "", S.dayKey || "", S.gsheet ? "g" : "", S.wedit || "", S.bedit || "", S.kv, S.kvp ? (S.kvp.sel ? "s" : S.kvp.scan ? "c" : S.kvp.manual ? "m" : "p") : ""].join(":");
   const y = key === S.lastKey ? window.scrollY : 0;
   S.lastKey = key;
   let h;
@@ -1266,7 +1305,7 @@ function render() {
   if (S.tab === "progress") drawProgressChart();
 }
 function goBack() {
-  if (S.tab === "kbzhu") { if (S.kvp) { kvClose(); return; } if (S.kv !== "home") { S.kv = "home"; render(); } return; }
+  if (S.tab === "kbzhu") { if (S.kvp) { kvClose(); return; } if (S.gsheet) { S.gsheet = null; render(); return; } if (S.wedit) { S.wedit = null; render(); return; } if (S.kv !== "home") { S.kv = "home"; S.bedit = null; render(); } return; }
   if (S.hedit && !S.zoom) {
     S.hedit = null;
     if (S.hfrom) { S.hfrom = null; S.tab = "diary"; S.view = "day"; }
@@ -1535,25 +1574,52 @@ const addDays = (s, n) => { const [y, m, d] = s.split("-").map(Number); return y
 const num = id => { const e = $("#" + id); return e ? parseNum(e.value) : NaN; };
 Object.assign(S, { kv: "home", kvp: null, kvDay: null, calc: { name: "", rows: [], cooked: "", portion: "" } });
 ICON.food = '<path d="M7 3v8a2 2 0 0 0 2 2v8M11 3v8M7 7h4M17 3c-2 2-3 5-3 8h3v10"/>';
+ICON.sun = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>';
+ICON.moon = '<path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/>';
+ICON.cup = '<path d="M5 8h11v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4zM16 9h2a2 2 0 0 1 0 4h-2M8 3v2M12 3v2"/>';
+ICON.body = '<circle cx="12" cy="5" r="2.5"/><path d="M12 8v7M6 10l6-1.5 6 1.5M9 21l3-6 3 6"/>';
 ICON.scan = '<path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 8v8M11 8v8M15 8v8"/>';
 $(".tabs [data-tab=kbzhu]").innerHTML = icon("food", 22) + "КБЖУ";
 
 /* ---- Open Food Facts ---- */
+const numOrNull = v => { const x = parseFloat(String(v).replace(",", ".")); return isFinite(x) ? x : null; };
 const offMap = p => {
   const n = p.nutriments || {};
-  const k = n["energy-kcal_100g"] ?? (n.energy_100g != null ? n.energy_100g / 4.184 : null);
-  if (k == null || !p.product_name) return null;
-  return { name: (p.product_name + (p.brands ? " (" + p.brands.split(",")[0] + ")" : "")).slice(0, 70), k: r1(k), b: r1(n.proteins_100g || 0), j: r1(n.fat_100g || 0), u: r1(n.carbohydrates_100g || 0), code: p.code || "" };
+  const b = numOrNull(n.proteins_100g), j = numOrNull(n.fat_100g), u = numOrNull(n.carbohydrates_100g);
+  let k = numOrNull(n["energy-kcal_100g"]);
+  if (k == null) { const kj = numOrNull(n.energy_100g); if (kj != null) k = kj / 4.184; }
+  const name = String(p.product_name_ru || p.product_name || "").trim();
+  if (!name) return null;
+  if (k == null && b != null && j != null && u != null) k = 4 * b + 9 * j + 4 * u;
+  if (k == null && b == null && j == null && u == null) return { name: name.slice(0, 70), k: 0, b: 0, j: 0, u: 0, code: p.code || "", empty: true };
+  const brand = p.brands ? " (" + String(p.brands).split(",")[0] + ")" : "";
+  return { name: (name + brand).slice(0, 70), k: r1(k || 0), b: r1(b || 0), j: r1(j || 0), u: r1(u || 0), code: p.code || "", partial: k == null || b == null || j == null || u == null };
 };
+async function fetchJson(url, ms = 12000) {
+  const ac = new AbortController(), t = setTimeout(() => ac.abort(), ms);
+  try {
+    const r = await fetch(url, { signal: ac.signal });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return await r.json();
+  } catch (e) {
+    throw new Error(e.name === "AbortError" ? "База не ответила вовремя" : /^HTTP/.test(e.message) ? "База вернула ошибку (" + e.message + ")" : "Нет связи с базой");
+  } finally { clearTimeout(t); }
+}
+const OFF_FIELDS = "code,product_name,product_name_ru,brands,nutriments";
 async function offByCode(code) {
-  const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=code,product_name,brands,nutriments`);
-  const j = await r.json();
-  return j.status === 1 ? offMap({ ...j.product, code }) : null;
+  const j = await fetchJson(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=${OFF_FIELDS}`);
+  return j.status === 1 && j.product ? offMap({ ...j.product, code }) : null;
 }
 async function offSearch(q) {
-  const r = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=20&lc=ru&fields=code,product_name,brands,nutriments`);
-  const j = await r.json();
-  return (j.products || []).map(offMap).filter(Boolean);
+  let list;
+  try {
+    const j = await fetchJson(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=24&lc=ru&fields=${OFF_FIELDS}`, 15000);
+    list = j.products || [];
+  } catch (e1) {
+    const j = await fetchJson(`https://search.openfoodfacts.org/search?q=${encodeURIComponent(q)}&page_size=24&langs=ru&fields=${OFF_FIELDS}`, 15000);
+    list = j.hits || j.products || [];
+  }
+  return list.map(offMap).filter(p => p && !p.empty);
 }
 function keepProd(p) {
   const L = N().prods;
@@ -1563,47 +1629,154 @@ function keepProd(p) {
 }
 
 /* ---- сканер штрихкодов ---- */
+const ZX_URLS = ["https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js", "https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"];
+let zxPromise = null;
+function loadZX() {
+  if (window.ZXing) return Promise.resolve();
+  if (zxPromise) return zxPromise;
+  zxPromise = new Promise((ok, no) => {
+    let i = 0;
+    const next = () => {
+      if (i >= ZX_URLS.length) { zxPromise = null; return no(new Error("zx")); }
+      const s = document.createElement("script");
+      s.src = ZX_URLS[i++]; s.onload = () => ok(); s.onerror = () => { s.remove(); next(); };
+      document.head.appendChild(s);
+    };
+    next();
+  });
+  return zxPromise;
+}
+const validEan = c => {
+  if (!/^\d+$/.test(c) || ![8, 12, 13].includes(c.length)) return false;
+  const d = c.split("").map(Number), chk = d.pop();
+  let sum = 0; d.reverse().forEach((x, i) => { sum += x * (i % 2 === 0 ? 3 : 1); });
+  return (10 - (sum % 10)) % 10 === chk;
+};
+let zxReader = null;
+async function decodeCanvas(cv) {
+  if ("BarcodeDetector" in window) {
+    try {
+      const det = new BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e"] });
+      const r = await det.detect(cv);
+      if (r.length) return r[0].rawValue;
+    } catch (e) {}
+  }
+  await loadZX();
+  const Z = window.ZXing;
+  if (!zxReader) {
+    zxReader = new Z.MultiFormatReader();
+    zxReader.setHints(new Map([[Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.EAN_8, Z.BarcodeFormat.UPC_A, Z.BarcodeFormat.UPC_E]], [Z.DecodeHintType.TRY_HARDER, true]]));
+  }
+  try { return zxReader.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(cv)))).getText(); }
+  catch (e) { return null; }
+}
 let scanStream = null, scanOn = false;
 function stopScan() { scanOn = false; if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; } }
 async function startScan() {
   const v = $("#kv-vid"); if (!v) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    S.kvp.scan = false; S.kvp.msg = "Камера недоступна в этом окне. Нажми «Фото штрихкода» или введи цифры вручную."; return render();
+  }
   try {
-    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } }, audio: false });
     v.srcObject = scanStream; await v.play(); scanOn = true;
-    if ("BarcodeDetector" in window) {
-      const det = new BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"] });
-      const loop = async () => {
-        if (!scanOn) return;
-        try { const r = await det.detect(v); if (r.length) return gotCode(r[0].rawValue); } catch (e) {}
-        setTimeout(loop, 250);
-      };
-      loop();
-    } else {
-      if (!window.ZXing) await new Promise((ok, no) => { const s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
-      const rd = new ZXing.BrowserMultiFormatReader();
-      const loop = async () => {
-        if (!scanOn) return;
-        try { const r = await rd.decodeFromVideoElement(v); if (r) return gotCode(r.getText()); } catch (e) {}
-        setTimeout(loop, 250);
-      };
-      loop();
+    loadZX().catch(() => {});
+    const cv = document.createElement("canvas");
+    let busy = false;
+    const tick = async () => {
+      if (!scanOn) return;
+      const vid = $("#kv-vid");
+      if (!vid || vid !== v) return stopScan();
+      if (!busy && v.videoWidth) {
+        busy = true;
+        try {
+          const k = Math.min(1, 1280 / v.videoWidth);
+          cv.width = Math.round(v.videoWidth * k); cv.height = Math.round(v.videoHeight * k);
+          cv.getContext("2d").drawImage(v, 0, 0, cv.width, cv.height);
+          const code = await decodeCanvas(cv);
+          if (code && validEan(code)) { busy = false; return gotCode(code); }
+        } catch (e) {}
+        busy = false;
+      }
+      setTimeout(tick, 250);
+    };
+    tick();
+  } catch (e) {
+    stopScan(); S.kvp.scan = false;
+    S.kvp.msg = e && e.name === "NotAllowedError" ? "Доступ к камере запрещён. Нажми «Фото штрихкода» или введи цифры вручную." : "Не удалось включить камеру. Нажми «Фото штрихкода» или введи цифры вручную.";
+    render();
+  }
+}
+async function gotCode(code) { stopScan(); S.kvp.scan = false; S.kvp.msg = ""; await lookup(code); }
+async function scanPhoto(file) {
+  if (!S.kvp) return;
+  S.kvp.msg = "Читаю штрихкод…"; S.kvp.scan = false; render();
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error("img")); i.src = url; });
+    const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+    const cv = document.createElement("canvas");
+    cv.width = Math.round(img.naturalWidth * k); cv.height = Math.round(img.naturalHeight * k);
+    cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+    let code = await decodeCanvas(cv);
+    if (!(code && validEan(code))) {
+      const rc = document.createElement("canvas"); rc.width = cv.height; rc.height = cv.width;
+      const c = rc.getContext("2d"); c.translate(rc.width, 0); c.rotate(Math.PI / 2); c.drawImage(cv, 0, 0);
+      code = await decodeCanvas(rc);
     }
-  } catch (e) { stopScan(); S.kvp.scan = false; S.kvp.msg = "Нет доступа к камере. Введи штрихкод вручную."; render(); }
+    if (code && validEan(code)) { S.kvp.msg = ""; return lookup(code); }
+    S.kvp.msg = "Не удалось прочитать штрихкод на фото. Сфотографируй ближе и ровно, чтобы он был чётким, или введи цифры вручную.";
+  } catch (e) { S.kvp.msg = "Не удалось обработать фото. Введи цифры штрихкода вручную."; }
+  finally { URL.revokeObjectURL(url); }
+  render();
 }
-async function gotCode(code) {
-  stopScan(); S.kvp.scan = false; S.kvp.msg = "";
-  await lookup(code);
-}
+(() => {
+  const f = document.createElement("input");
+  f.type = "file"; f.accept = "image/*"; f.setAttribute("capture", "environment"); f.hidden = true; f.id = "kv-photo";
+  f.addEventListener("change", () => { const x = f.files[0]; f.value = ""; if (x) scanPhoto(x); });
+  document.body.appendChild(f);
+})();
 async function lookup(code) {
   code = String(code).replace(/\D/g, "");
   if (code.length < 6) { S.kvp.msg = "Проверь штрихкод"; return render(); }
   let p = N().prods.find(x => x.code === code);
   if (!p) {
     S.kvp.msg = "Ищу в базе…"; render();
-    try { const o = await offByCode(code); if (o) p = keepProd(o); } catch (e) { S.kvp.msg = "Нет связи с базой продуктов."; return render(); }
+    let o = null;
+    try { o = await offByCode(code); } catch (e) { S.kvp.msg = e.message + ". Проверь интернет или добавь продукт вручную."; return render(); }
+    if (o && !o.empty && !o.partial) p = keepProd(o);
+    else if (o) { S.kvp.msg = o.empty ? `«${o.name}» найден, но в базе нет КБЖУ. Впиши значения с упаковки.` : "В базе не все значения. Проверь и дополни."; S.kvp.draft = { ...o, code }; S.kvp.manual = true; return render(); }
   }
-  if (!p) { S.kvp.msg = `Штрихкод ${code} не найден. Добавь продукт вручную, он запомнится.`; S.kvp.manual = true; S.kvp.code = code; return render(); }
+  if (!p) { S.kvp.msg = `Штрихкод ${code} не найден в базе. Впиши значения с упаковки, продукт запомнится.`; S.kvp.draft = { code }; S.kvp.manual = true; return render(); }
   S.kvp.msg = ""; S.kvp.sel = p; render();
+}
+
+/* ---- общие помощники КБЖУ ---- */
+const MEALS = [["bf", "Завтрак", "sun"], ["ln", "Обед", "sun"], ["dn", "Ужин", "moon"], ["sn", "Перекус", "cup"]];
+const autoMeal = () => { const h = new Date().getHours(); return h < 11 ? "bf" : h < 16 ? "ln" : h < 21 ? "dn" : "sn"; };
+const B = () => { const n = N(); return n.bio || (n.bio = { entries: [], goal: null }); };
+const BIO = [["height", "Рост", "см"], ["weight", "Вес", "кг"], ["biceps", "Бицепс", "см"], ["waist", "Талия", "см"], ["chest", "Грудь", "см"], ["hips", "Бёдра", "см"], ["thigh", "Бедро", "см"], ["neck", "Шея", "см"], ["shoulders", "Плечи", "см"], ["calf", "Икры", "см"]];
+const BIO_RANGE = { height: [50, 250], weight: [20, 500] };
+const byDayDesc = (a, b) => (a.day < b.day ? 1 : a.day > b.day ? -1 : 0);
+function latestVal(f) {
+  if (f === "weight") { const w = D.bodyweight.slice().sort(byDayDesc)[0]; return w ? w.weight : null; }
+  for (const e of B().entries.slice().sort(byDayDesc)) if (e.vals[f] != null) return e.vals[f];
+  return null;
+}
+function snapshot() { const o = {}; BIO.forEach(([f]) => { const v = latestVal(f); if (v != null) o[f] = v; }); return o; }
+const daysBetween = (a, b) => Math.round((new Date(b + "T00:00:00") - new Date(a + "T00:00:00")) / 864e5);
+const addMonths = (s, n) => { const [y, m, d] = s.split("-").map(Number); return ymd(new Date(y, m - 1 + n, d)); };
+const goalEnd = g => addMonths(g.startDay, g.months);
+function goalBase(g, f) {
+  if (g.base && g.base[f] != null) return g.base[f];
+  if (f === "weight") { const w = D.bodyweight.filter(p => p.day >= g.startDay).sort((a, b) => (a.day < b.day ? -1 : 1))[0]; return w ? w.weight : null; }
+  const e = B().entries.filter(x => x.day >= g.startDay && x.vals[f] != null).sort((a, b) => (a.day < b.day ? -1 : 1))[0];
+  return e ? e.vals[f] : null;
+}
+const ymdOk = s => /^\d{4}-\d{2}-\d{2}$/.test(s) && !isNaN(new Date(s + "T00:00:00")) && s >= "2000-01-01";
+function upsertWeight(day, weight) {
+  const p = D.bodyweight.find(x => x.day === day);
+  if (p) p.weight = weight; else D.bodyweight.push({ day, weight });
 }
 
 /* ---- представления ---- */
@@ -1613,14 +1786,16 @@ function viewKbzhu() {
   if (S.kv === "calc") h = kvBack("Счётчик КБЖУ") + viewCalc();
   else if (S.kv === "log") h = kvBack("Дневник питания") + viewLog();
   else if (S.kv === "tips") h = kvBack("Советы") + viewTips();
+  else if (S.kv === "bio") h = kvBack("Биометрические данные") + viewBio();
   else {
     const b = (to, ic, t, x) => `<button class="wcard" style="min-height:76px" data-act="kv-go" data-to="${to}">${icon(ic, 26)}<span style="flex:1;min-width:0"><span class="t" style="display:block">${t}</span><span class="x" style="display:block">${x}</span></span>${icon("right")}</button>`;
     h = '<div class="sec" style="margin-top:6px"><h2>КБЖУ</h2></div>' +
       b("calc", "food", "Счётчик КБЖУ", "Сырые граммовки → готовое блюдо") +
       b("log", "list", "Дневник питания", "Записать, сколько съел, и посмотреть КБЖУ") +
-      b("tips", "trend", "Советы", "Вес, недельная сводка и рекомендации");
+      b("tips", "trend", "Советы", "Вес, недельная сводка и рекомендации") +
+      b("bio", "body", "Биометрические данные", "Рост, вес, замеры, цель и её прогресс");
   }
-  return h + (S.kvp ? viewPicker() : "");
+  return h + (S.kvp ? viewPicker() : "") + (S.gsheet ? viewGoalSheet() : "") + (S.wedit ? viewWEdit() : "");
 }
 
 /* калькулятор: сырое → готовое */
@@ -1659,25 +1834,67 @@ function viewCalc() {
 
 /* дневник питания */
 const dayLog = d => N().log.filter(x => x.day === d);
+const fmtK = n => Math.round(n).toLocaleString("ru-RU");
+function macroGoals(g) {
+  if (!(g > 0)) return null;
+  const bw = latestVal("weight");
+  const p = bw ? Math.round(bw * 1.8) : Math.round(g * 0.25 / 4);
+  const f = Math.round(g * 0.27 / 9);
+  return { b: p, j: f, u: Math.max(0, Math.round((g - p * 4 - f * 9) / 4)) };
+}
+function ringSvg(val, goal) {
+  const R = 52, C = 2 * Math.PI * R, fr = goal > 0 ? Math.min(1, val / goal) : 0, over = goal > 0 && val > goal * 1.1;
+  return `<svg viewBox="0 0 120 120" width="136" height="136" aria-hidden="true"><circle cx="60" cy="60" r="${R}" fill="none" stroke="var(--chip)" stroke-width="11"/>` +
+    `<circle cx="60" cy="60" r="${R}" fill="none" stroke="${over ? "var(--danger)" : "var(--accent)"}" stroke-width="11" stroke-linecap="round" stroke-dasharray="${(C * fr).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 60 60)"/></svg>`;
+}
+function macroBar(label, val, goal) {
+  const pct = goal > 0 ? Math.min(100, val / goal * 100) : 0;
+  return `<div class="mrow"><div class="mtop"><span>${label}</span><b>${Math.round(val)}${goal > 0 ? ` / ${goal}` : ""} г</b></div><div class="mbar"><i style="width:${pct.toFixed(0)}%"></i></div></div>`;
+}
+function recentFoods() {
+  const seen = new Set(), out = [];
+  for (const x of N().log.slice().reverse()) {
+    if (seen.has(x.name)) continue; seen.add(x.name);
+    out.push(x); if (out.length >= 5) break;
+  }
+  return out;
+}
 function viewLog() {
-  const d = S.kvDay || (S.kvDay = today()), L = dayLog(d), tot = sumM(L), g = N().kcalGoal;
-  let h = `<div class="kick" style="margin-left:0">${d === today() ? "Сегодня" : fmtDay(d)}<span class="wk-nav"><button data-act="kv-day" data-d="-1" aria-label="Раньше">${icon("back", 20)}</button><button data-act="kv-day" data-d="1" aria-label="Позже">${icon("right", 20)}</button></span></div>`;
-  h += `<div class="tiles"><div class="tile"><small class="l">Ккал</small><div class="v">${Math.round(tot.k)}${g ? `<small>/ ${g}</small>` : ""}</div></div>` +
-    `<div class="tile"><small class="l">Б</small><div class="v">${r1(tot.b)}</div></div><div class="tile"><small class="l">Ж</small><div class="v">${r1(tot.j)}</div></div><div class="tile"><small class="l">У</small><div class="v">${r1(tot.u)}</div></div></div>`;
-  h += `<button class="btn primary" style="margin:0 0 10px" data-act="kv-pick" data-ctx="log">${icon("plus", 20)} Добавить еду</button>`;
-  if (!L.length) h += '<div class="card empty">За этот день пока ничего нет</div>';
-  L.forEach(x => { h += `<div class="exrow"><div class="g"><div class="n">${esc(x.name)}</div><div class="sub">${fmtNum(x.g)} г · ${macTxt(x)}</div></div><button class="ico" data-act="kv-del" data-id="${x.id}" aria-label="Удалить">${icon("x")}</button></div>`; });
+  const d = S.kvDay || (S.kvDay = today()), L = dayLog(d), tot = sumM(L), g = N().kcalGoal, mg = macroGoals(g);
+  const dt = new Date(d + "T00:00:00");
+  let h = `<div class="kick" style="margin-left:0">${WD[dt.getDay()]} · ${dt.getDate()} ${MONTHS[dt.getMonth()]}<span class="wk-nav"><button data-act="kv-day" data-d="-1" aria-label="Раньше">${icon("back", 20)}</button><button data-act="kv-day" data-d="1" aria-label="Позже" ${d >= today() ? 'disabled style="opacity:.3"' : ""}>${icon("right", 20)}</button></span></div>`;
+  h += `<div class="dayh" style="margin-bottom:12px">${d === today() ? "Сегодня" : d === addDays(today(), -1) ? "Вчера" : fmtDay(d)}</div>`;
+  h += `<div class="ringcard"><div class="rwrap">${ringSvg(tot.k, g)}<div class="rmid"><b>${fmtK(tot.k)}</b><span>${g > 0 ? `из ${fmtK(g)}` : "ккал"}</span>${g > 0 ? "<span>ккал</span>" : ""}</div></div>` +
+    `<div class="rbars">${macroBar("Белки", tot.b, mg && mg.b)}${macroBar("Жиры", tot.j, mg && mg.j)}${macroBar("Углеводы", tot.u, mg && mg.u)}</div></div>`;
+  if (!(g > 0)) h += `<div class="card" style="display:flex;gap:10px;align-items:center"><label class="sub" for="kv-kg" style="flex:1">Задай дневную норму ккал, и кольцо и цели по БЖУ заработают</label><input id="kv-kg" inputmode="numeric" placeholder="2800" style="width:96px"></div>`;
+  else if (tot.k > g * 1.1) h += `<div class="warn">Норма превышена на ${fmtK(tot.k - g)} ккал.</div>`;
+  h += '<div class="sec"><h2>Приёмы пищи</h2></div>';
+  const autoM = m => (MEALS.some(x => x[0] === m) ? m : "sn");
+  for (const [mk, name, ic] of MEALS) {
+    const items = L.filter(x => autoM(x.meal) === mk), mt = sumM(items);
+    h += `<div class="meal"><div class="mh"><span class="mi">${icon(ic, 20)}</span><b>${name}</b><span class="mk">${items.length ? Math.round(mt.k) + " ккал" : ""}</span>` +
+      `<button class="addc" data-act="kv-pick" data-ctx="log" data-meal="${mk}" aria-label="Добавить в «${name}»">${icon("plus", 20)}</button></div>`;
+    h += items.map(x => `<div class="mitem"><div class="g"><div class="n">${esc(x.name)}</div><div class="sub">${fmtNum(x.g)} г · ${Math.round(x.k)} ккал · Б ${r1(x.b)} · Ж ${r1(x.j)} · У ${r1(x.u)}</div></div>` +
+      `<button class="ico" data-act="kv-del" data-id="${x.id}" aria-label="Удалить ${esc(x.name)}">${icon("x", 16)}</button></div>`).join("");
+    h += "</div>";
+  }
+  const rec = recentFoods();
+  if (rec.length) {
+    h += '<div class="sec"><h2>Недавние записи</h2></div>' + rec.map((x, i) =>
+      `<div class="mitem rec"><div class="g"><div class="n">${esc(x.name)}</div><div class="sub">${Math.round(x.k / x.g * 100)} ккал на 100 г · Б ${r1(x.b / x.g * 100)} · Ж ${r1(x.j / x.g * 100)} · У ${r1(x.u / x.g * 100)}</div></div>` +
+      `<button class="addc" data-act="kv-quick" data-i="${i}" aria-label="Добавить ещё раз: ${esc(x.name)}">${icon("plus", 20)}</button></div>`).join("");
+  }
   return h;
 }
 
 /* выбор продукта (общий для калькулятора и дневника) */
-function pickList() {
+function foodPickList() {
   const q = (S.kvp.q || "").trim().toLowerCase(), ps = N().prods.slice().reverse();
   const loc = ps.filter(p => !q || p.name.toLowerCase().includes(q)).slice(0, 30);
-  const row = (p, src, i) => `<button class="pick" data-act="kv-sel" data-src="${src}" data-i="${i}"><span class="g"><span class="b" style="display:block;overflow-wrap:anywhere">${esc(p.name)}</span><span class="sub">на 100 г: ${macTxt(p)}</span></span></button>`;
+  const row = (p, src, i) => `<button class="pick" data-act="kv-sel" data-src="${src}" data-i="${i}"><span class="g"><span class="b" style="display:block;overflow-wrap:anywhere">${esc(p.name)}</span><span class="sub">на 100 г: ${macTxt(p)}${p.partial ? " · неполные данные" : ""}</span></span></button>`;
   let h = loc.map(p => row(p, "l", ps.indexOf(p))).join("");
   h += S.kvp.online.map((p, i) => row(p, "o", i)).join("");
-  return h || '<div class="empty">Ничего не найдено. Нажми «Найти онлайн» или добавь свой продукт.</div>';
+  return h || '<div class="empty">Ничего не найдено. Нажми «Найти» или добавь свой продукт.</div>';
 }
 function viewPicker() {
   const k = S.kvp;
@@ -1686,26 +1903,29 @@ function viewPicker() {
   if (k.sel) {
     const p = k.sel;
     h += head("Сколько грамм?") + `<div class="card"><div class="b">${esc(p.name)}</div><div class="sub">на 100 г: ${macTxt(p)}</div></div>` +
-      `<label class="field-l" for="kv-g">${k.ctx === "calc" ? "Вес в сыром виде, г" : "Съедено, г"}</label><input id="kv-g" inputmode="decimal" placeholder="например, 150"><div id="kv-gr" class="readout"></div>` +
-      `<button class="btn primary" data-act="kv-add">Добавить</button>`;
+      `<label class="field-l" for="kv-g">${k.ctx === "calc" ? "Вес в сыром виде, г" : "Съедено, г"}</label><input id="kv-g" inputmode="decimal" placeholder="например, 150"><div id="kv-gr" class="readout"></div>`;
+    if (k.ctx === "log") h += `<div class="seg" style="margin-top:10px" role="group" aria-label="Приём пищи">` + MEALS.map(([mk, n]) => `<button class="${mk === k.meal ? "on" : ""}" data-act="kv-meal" data-m="${mk}">${n}</button>`).join("") + "</div>";
+    h += `<button class="btn primary" data-act="kv-add">Добавить</button>`;
   } else if (k.scan) {
-    h += head("Сканирование") + '<video id="kv-vid" playsinline muted style="width:100%;border-radius:14px;background:#000;max-height:50vh"></video><div class="sub" style="margin-top:8px">Наведи камеру на штрихкод</div><button class="btn plain" data-act="kv-scan-stop">Отмена</button>';
+    h += head("Сканирование") + '<video id="kv-vid" playsinline muted style="width:100%;border-radius:14px;background:#000;max-height:50vh"></video><div class="sub" style="margin-top:8px">Наведи камеру на штрихкод, держи ровно и не слишком близко</div><button class="btn plain" data-act="kv-scan-stop">Отмена</button>';
   } else if (k.manual) {
-    h += head("Свой продукт (на 100 г)") + `<label class="field-l" for="kv-mn">Название</label><input id="kv-mn" placeholder="Название">` +
-      '<div class="row"><div class="stepper"><label class="field-l" for="kv-mk">Ккал</label><input id="kv-mk" inputmode="decimal"></div><div class="stepper"><label class="field-l" for="kv-mb">Белки</label><input id="kv-mb" inputmode="decimal"></div></div>' +
-      '<div class="row"><div class="stepper"><label class="field-l" for="kv-mj">Жиры</label><input id="kv-mj" inputmode="decimal"></div><div class="stepper"><label class="field-l" for="kv-mu">Углеводы</label><input id="kv-mu" inputmode="decimal"></div></div>' +
+    const dr = k.draft || {}, val = x => (dr[x] != null && dr[x] !== 0 ? esc(String(dr[x]).replace(".", ",")) : "");
+    h += head("Свой продукт (на 100 г)") + `<label class="field-l" for="kv-mn">Название</label><input id="kv-mn" placeholder="Название" value="${esc(dr.name || "")}">` +
+      `<div class="row"><div class="stepper"><label class="field-l" for="kv-mk">Ккал</label><input id="kv-mk" inputmode="decimal" value="${val("k")}"></div><div class="stepper"><label class="field-l" for="kv-mb">Белки</label><input id="kv-mb" inputmode="decimal" value="${val("b")}"></div></div>` +
+      `<div class="row"><div class="stepper"><label class="field-l" for="kv-mj">Жиры</label><input id="kv-mj" inputmode="decimal" value="${val("j")}"></div><div class="stepper"><label class="field-l" for="kv-mu">Углеводы</label><input id="kv-mu" inputmode="decimal" value="${val("u")}"></div></div>` +
       (k.msg ? `<div class="warn" style="margin-top:10px">${esc(k.msg)}</div>` : "") + '<button class="btn primary" data-act="kv-manual-ok">Сохранить</button>';
   } else {
-    h += head("Выбери продукт") + `<input id="kv-q" placeholder="Поиск по названию" value="${esc(k.q)}" autocomplete="off">` +
-      `<div class="row"><button class="btn soft" style="margin:0" data-act="kv-scan">${icon("scan", 20)} Сканер</button><button class="btn soft" style="margin:0" data-act="kv-online">Найти онлайн</button></div>` +
-      `<div class="row"><input id="kv-code" inputmode="numeric" placeholder="Штрихкод вручную"><button class="btn primary" style="margin:0;width:auto;flex:none" data-act="kv-code-ok">OK</button></div>` +
+    h += head("Выбери продукт") +
+      `<div class="row" style="margin-top:0"><button class="btn soft" style="margin:0" data-act="kv-scan">${icon("scan", 20)} Сканер</button><button class="btn soft" style="margin:0" data-act="kv-photo">${icon("camera", 20)} Фото штрихкода</button></div>` +
+      `<div class="row"><input id="kv-q" placeholder="Поиск по названию" value="${esc(k.q)}" autocomplete="off"><button class="btn primary" style="margin:0;width:auto;flex:none" data-act="kv-online">Найти</button></div>` +
+      `<div class="row"><input id="kv-code" inputmode="numeric" placeholder="Штрихкод вручную"><button class="btn soft" style="margin:0;width:auto;flex:none" data-act="kv-code-ok">OK</button></div>` +
       (k.msg ? `<div class="warn" style="margin-top:10px">${esc(k.msg)}</div>` : "") +
-      `<div id="kv-list" style="margin-top:10px">${pickList()}</div><button class="btn outline" data-act="kv-manual">Добавить свой продукт</button>`;
+      `<div id="kv-list" style="margin-top:10px">${foodPickList()}</div><button class="btn outline" data-act="kv-manual">Добавить свой продукт</button>`;
   }
   return h + "</div></div>";
 }
 
-/* ---- Советы: вес, недельная сводка ---- */
+/* ---- Советы ---- */
 const GOALS = { gain: "Набор массы", cut: "Сушка", keep: "Поддержание" };
 const avg = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : null;
 function weekReport() {
@@ -1721,19 +1941,62 @@ function weekReport() {
   const best = (a, b) => { const m = {}; D.sessions.filter(s => s.finishedAt != null && inR(s.day, a, b)).forEach(s => s.sets.forEach(x => { if (x.weight > 0) m[x.exercise] = Math.max(m[x.exercise] || 0, x.weight * (1 + x.reps / 30)); })); return m; };
   const cur = best(s1, end), base = best(addDays(s1, -35), addDays(s1, -1)), ch = [];
   for (const n in cur) if (base[n]) ch.push({ n, pct: (cur[n] / base[n] - 1) * 100 });
-  const str = ch.length ? { pct: avg(ch.map(x => x.pct)), up: ch.filter(x => x.pct > 1).length, down: ch.filter(x => x.pct < -1).length, n: ch.length } : null;
+  const sorted = ch.slice().sort((a, b) => b.pct - a.pct);
+  const str = ch.length ? { pct: avg(ch.map(x => x.pct)), up: ch.filter(x => x.pct > 1).length, down: ch.filter(x => x.pct < -1).length, n: ch.length, top: sorted[0], low: sorted[sorted.length - 1] } : null;
   const trainings = D.sessions.filter(s => s.finishedAt != null && inR(s.day, s1, end)).length;
-  const bw = wCur.length ? wCur[wCur.length - 1].weight : (D.bodyweight.slice().sort((a, b) => a.day < b.day ? 1 : -1)[0] || {}).weight;
+  const bw = latestVal("weight");
   return { s1, end, dW, kcal, kd: dk.length, protein: dk.length ? P.b / dk.length : null, str, trainings, bw };
 }
+function bioAdvice(r) {
+  const out = [], g = B().goal, es = B().entries;
+  const fmtC = v => fmtDelta(r1(v));
+  if (g) {
+    const end = goalEnd(g), tot = Math.max(1, daysBetween(g.startDay, end)), el = Math.max(0, Math.min(tot, daysBetween(g.startDay, today()))), left = tot - el;
+    const w0 = goalBase(g, "weight"), w1 = latestVal("weight"), T = g.targetWeight;
+    const dw = w0 != null && w1 != null ? w1 - w0 : null;
+    if (T && w0 != null && w1 != null && g.type !== "keep") {
+      const planned = w0 + (T - w0) * el / tot, diff = w1 - planned, weeksLeft = Math.max(left / 7, 0.5);
+      const need = (T - w1) / weeksLeft, have = r.dW == null ? 0 : r.dW;
+      const gap = g.type === "gain" ? need - have : have - need;
+      const kc = Math.max(100, Math.min(500, Math.round(Math.abs(need - have) * 1100 / 10) * 10));
+      const behind = g.type === "gain" ? diff < -0.5 : diff > 0.5, ahead = g.type === "gain" ? diff > 0.5 : diff < -0.5;
+      if (left <= 0) out.push([`Срок цели вышел. Вес ${fmtNum(r1(w1))} кг при цели ${fmtNum(T)} кг. Можно продлить цель или поставить новую.`, "a"]);
+      else if (behind) out.push([`Ты отстаёшь от плана: по графику сейчас должно быть около ${fmtNum(r1(planned))} кг, а у тебя ${fmtNum(r1(w1))} кг. До ${fmtDay(end)} нужен темп около ${fmtNum(r1(Math.abs(need)))} кг в неделю, поэтому ${g.type === "gain" ? "добавь" : "убери"} примерно ${kc} ккал в день.`, "a"]);
+      else if (ahead) out.push([`Ты идёшь быстрее плана (по графику около ${fmtNum(r1(planned))} кг, у тебя ${fmtNum(r1(w1))} кг). Темп можно чуть снизить, чтобы не перегнуть: ${g.type === "gain" ? "убери" : "добавь"} примерно ${Math.min(kc, 250)} ккал.`, "a"]);
+      else out.push([`Ты идёшь по плану цели: сейчас ${fmtNum(r1(w1))} кг при плане около ${fmtNum(r1(planned))} кг. Осталось ${left} дн.`, "g"]);
+    } else if (dw != null && el >= 7) {
+      const rate = dw / (el / 7);
+      out.push([`С начала цели (${el} дн из ${tot}) вес изменился на ${fmtC(dw)} кг, примерно ${fmtC(rate)} кг в неделю.${g.type === "gain" && (rate < 0.1 || rate > 0.6) ? " Для набора массы комфортный темп 0,25–0,5 кг в неделю." : ""}${g.type === "cut" && (rate > -0.2 || rate < -1) ? " Для сушки комфортный темп 0,3–0,7 кг в неделю." : ""}`, ""]);
+    }
+    const wst = [goalBase(g, "waist"), latestVal("waist")], bic = [goalBase(g, "biceps"), latestVal("biceps")];
+    const dWaist = wst[0] != null && wst[1] != null ? wst[1] - wst[0] : null, dBic = bic[0] != null && bic[1] != null ? bic[1] - bic[0] : null;
+    const strOk = r.str && r.str.pct > -1;
+    if (g.type === "gain") {
+      if (dw != null && dw >= 1 && dWaist != null && dWaist >= 2 && !(dBic != null && dBic >= 0.5)) out.push([`Талия выросла на ${fmtC(dWaist)} см при прибавке ${fmtC(dw)} кг, а бицепс почти не изменился: прибавка идёт больше в жир. Убери 150–250 ккал и держи белок.`, "a"]);
+      else if (dBic != null && dBic >= 0.5 && (dWaist == null || dWaist <= 1.5)) out.push([`Бицепс вырос на ${fmtC(dBic)} см, а талия почти на месте: набор похож на мышечный. Продолжай в том же духе.`, "g"]);
+    } else if (g.type === "cut") {
+      if (dWaist != null && dWaist <= -1.5 && strOk) out.push([`Талия уменьшилась на ${fmtC(-dWaist)} см, силовые держатся: уходит жир, а не мышцы.`, "g"]);
+      else if (dw != null && dw <= -1 && dWaist != null && dWaist > -0.5 && ((dBic != null && dBic < 0) || (r.str && r.str.pct < -1))) out.push([`Вес падает, а талия не уменьшается и ${dBic != null && dBic < 0 ? "бицепс уменьшился" : "силовые снижаются"}: возможно, уходят мышцы или вода. Добавь 150–250 ккал и проверь белок.`, "a"]);
+    }
+  } else if (es.length || D.bodyweight.length) {
+    out.push(["Поставь цель в «Биометрических данных» (набор, сушка или поддержание на выбранный срок), и советы будут учитывать её и твой прогресс.", "w"]);
+  }
+  const h = latestVal("height"), wst = latestVal("waist");
+  if (h && wst && wst / h >= 0.5 && (!g || g.type !== "cut")) out.push([`Талия ${fmtNum(wst)} см при росте ${fmtNum(h)} см (отношение ${fmtNum(r1(wst / h * 100) / 100)}). Выше 0,5: следи, чтобы талия росла медленнее веса, и не уходи в большой профицит калорий.`, "w"]);
+  const last = es.slice().sort(byDayDesc)[0];
+  if (last && daysBetween(last.day, today()) > 14) out.push([`Замеров не было ${daysBetween(last.day, today())} дн. Добавь новые: по ним считается прогресс цели.`, "w"]);
+  return out;
+}
 function advice(r) {
-  const goal = N().goal, out = [];
+  const goal = (B().goal && B().goal.type) || N().goal, out = [];
   if (r.dW == null || r.kd < 3) {
-    out.push(["Для точного совета нужно минимум 3 дня записей еды за неделю и 2 взвешивания (или вес за прошлую неделю).", "w"]);
-    return out;
+    out.push(["Для точного совета по питанию нужно минимум 3 дня записей еды за неделю и 2 взвешивания (можно добавить вес за прошлые дни).", "w"]);
+    return out.concat(bioAdvice(r));
   }
   const dW = r.dW, sp = r.str ? r.str.pct : null, strUp = sp != null && sp > 1, strDown = sp != null && sp < -1;
-  const strTxt = sp == null ? "Силовые пока не с чем сравнить: запиши тренировки с тем же упражнением." : strUp ? `Силовые растут (в среднем ${fmtDelta(r1(sp))}%).` : strDown ? `Силовые падают (в среднем ${fmtDelta(r1(sp))}%).` : "Силовые без изменений.";
+  const strTxt = sp == null ? "Силовые пока не с чем сравнить: запиши тренировки с тем же упражнением." :
+    (strUp ? `Силовые растут (в среднем ${fmtDelta(r1(sp))}%).` : strDown ? `Силовые падают (в среднем ${fmtDelta(r1(sp))}%).` : "Силовые без изменений.") +
+    (r.str.top && r.str.n > 1 ? ` Лучше всего: ${r.str.top.n} (${fmtDelta(r1(r.str.top.pct))}%)${r.str.low.pct < -1 ? `, хуже всего: ${r.str.low.n} (${fmtDelta(r1(r.str.low.pct))}%)` : ""}.` : "");
   const rate = r.bw ? dW / r.bw * 100 : 0;
   if (goal === "gain") {
     if (dW <= 0.1) out.push([strUp ? `Вес почти стоит на месте (${fmtDelta(r1(dW))} кг), но силовые растут: возможно, идёт набор качества. Если хочешь расти в весе, добавь 150–250 ккал.` : `Вес не растёт (${fmtDelta(r1(dW))} кг)${sp == null ? "" : " и силовые не растут"}. Добавь 250–300 ккал в день и следи за прогрессией нагрузок.`, "a"]);
@@ -1750,53 +2013,135 @@ function advice(r) {
     else out.push([`Вес снижается (${fmtDelta(r1(dW))} кг). Для поддержания добавь около 200 ккал.`, "a"]);
   }
   out.push([strTxt, ""]);
+  out.push(...bioAdvice(r));
   if (r.protein != null && r.bw && r.protein < r.bw * 1.4) out.push([`Белка в среднем ${Math.round(r.protein)} г в день. Для тренирующегося обычно хватает 1,6–2 г на кг веса (около ${Math.round(r.bw * 1.6)}–${Math.round(r.bw * 2)} г).`, "w"]);
   if (r.kcal) { const tdee = r.kcal - dW * 7700 / 7; out.push([`Оценка твоей поддерживающей калорийности: около ${Math.round(tdee / 10) * 10} ккал в день (по средним ${Math.round(r.kcal)} ккал и изменению веса).`, ""]); }
   return out;
 }
 function viewTips() {
-  const r = weekReport(), g = N().goal;
+  const r = weekReport(), g = (B().goal && B().goal.type) || N().goal;
   let h = '<div class="sec" style="margin-top:6px"><h2>Цель</h2></div><div class="seg">' + Object.entries(GOALS).map(([k, l]) => `<button class="${k === g ? "on" : ""}" data-act="kv-goal" data-g="${k}">${l}</button>`).join("") + "</div>";
   h += `<div class="row"><div class="stepper"><label class="field-l" for="kv-kg">Норма ккал в день (необязательно)</label><input id="kv-kg" inputmode="numeric" value="${N().kcalGoal || ""}" placeholder="2800"></div></div>`;
-  h += '<div class="sec"><h2>Мой вес</h2></div><div class="row" style="margin-top:0"><input id="kv-w" inputmode="decimal" placeholder="Вес сегодня, кг"><button class="btn primary" style="margin:0;width:auto;flex:none" data-act="kv-w-save">Записать</button></div>';
-  const rec = D.bodyweight.slice().sort((a, b) => a.day < b.day ? 1 : -1).slice(0, 7);
-  rec.forEach((p, i) => { const nx = rec[i + 1]; h += `<div class="exrow" style="margin-top:8px"><div class="g"><div class="n">${fmtNum(p.weight)} кг</div><div class="sub">${fmtDay(p.day)}${nx ? " · " + fmtDelta(r1(p.weight - nx.weight)) + " кг" : ""}</div></div><button class="ico" data-act="kv-w-del" data-day="${p.day}" aria-label="Удалить">${icon("x")}</button></div>`; });
+  h += '<div class="sec"><h2>Мой вес</h2></div>' +
+    `<div class="row" style="margin-top:0"><div class="stepper" style="flex:1.1"><label class="field-l" for="kv-wd">Дата</label><input id="kv-wd" type="date" value="${today()}" max="${today()}"></div>` +
+    `<div class="stepper"><label class="field-l" for="kv-w">Вес, кг</label><input id="kv-w" inputmode="decimal" placeholder="78,4"></div></div>` +
+    `<button class="btn primary" style="margin-top:8px" data-act="kv-w-save">Записать вес</button>`;
+  const rec = D.bodyweight.slice().sort(byDayDesc).slice(0, 10);
+  rec.forEach((p, i) => { const nx = rec[i + 1]; h += `<button class="wrow" data-act="kv-w-edit" data-day="${esc(p.day)}" aria-label="Изменить вес от ${fmtDay(p.day)}"><span class="g"><span class="n">${fmtNum(p.weight)} кг</span><span class="sub">${fmtDay(p.day)}${nx ? " · " + fmtDelta(r1(p.weight - nx.weight)) + " кг" : ""}</span></span><span class="link2">Изменить</span></button>`; });
   h += `<div class="sec"><h2>Сводка за неделю</h2></div><div class="sub" style="margin:-4px 4px 8px">${fmtDay(r.s1)} – ${fmtDay(r.end)}</div>`;
   h += `<div class="tiles"><div class="tile"><small class="l">Вес</small><div class="v">${r.dW == null ? "—" : fmtDelta(r1(r.dW))}<small>кг</small></div></div><div class="tile"><small class="l">Ккал/день</small><div class="v">${r.kcal ? Math.round(r.kcal) : "—"}</div></div><div class="tile"><small class="l">Трен.</small><div class="v">${r.trainings}</div></div></div>`;
   advice(r).forEach(([t, c]) => { h += c === "w" ? `<div class="warn">${esc(t)}</div>` : `<div class="card${c === "g" ? " ok" : ""}" style="${c === "a" ? "border-left:4px solid var(--accent)" : c === "g" ? "border-left:4px solid #1e8e3e" : ""}">${esc(t)}</div>`; });
-  return h + '<div class="sub" style="margin-top:8px">Это ориентиры, а не медицинская рекомендация.</div>';
+  return h;
+}
+function viewWEdit() {
+  const p = D.bodyweight.find(x => x.day === S.wedit);
+  if (!p) return "";
+  return '<div class="scrim" data-act="kv-we-close"></div><div class="sheet" role="dialog" aria-label="Изменить вес"><div class="sheet-in"><div class="grab"></div>' +
+    '<div class="sheet-h" style="margin-bottom:8px"><div class="h1">Изменить вес</div><button class="link" data-act="kv-we-close">Закрыть</button></div>' +
+    `<div class="row" style="margin-top:0"><div class="stepper" style="flex:1.1"><label class="field-l" for="we-d">Дата</label><input id="we-d" type="date" value="${esc(p.day)}" max="${today()}"></div>` +
+    `<div class="stepper"><label class="field-l" for="we-w">Вес, кг</label><input id="we-w" inputmode="decimal" value="${fmtNum(p.weight)}"></div></div>` +
+    '<button class="btn primary" data-act="kv-we-save">Сохранить</button><button class="btn danger" data-act="kv-we-del">Удалить запись</button></div></div>';
+}
+
+/* ---- Биометрические данные ---- */
+function viewBio() {
+  const b = B(), g = b.goal, es = b.entries.slice().sort(byDayDesc);
+  const ed = S.bedit ? es.find(x => x.id === S.bedit) : null;
+  let h = '<div class="sec" style="margin-top:6px"><h2>Цель</h2></div>';
+  if (!g) {
+    h += `<div class="card"><div class="sub">Цель не задана. Впиши замеры ниже, потом поставь цель: набор массы, сушка или поддержание на выбранный срок.</div></div><button class="btn primary" style="margin-top:0" data-act="g-open">${icon("trend", 18)} Поставить цель</button>`;
+  } else {
+    const end = goalEnd(g), tot = Math.max(1, daysBetween(g.startDay, end)), el = Math.max(0, Math.min(tot, daysBetween(g.startDay, today()))), left = Math.max(0, tot - el);
+    h += `<div class="card"><div class="b" style="font-size:18px">${GOALS[g.type]} · ${g.months} ${g.months === 1 ? "месяц" : g.months < 5 ? "месяца" : "месяцев"}</div>` +
+      `<div class="sub">${fmtDay(g.startDay)} → ${fmtDay(end)}${left > 0 ? ` · осталось ${left} дн` : " · срок вышел"}</div>` +
+      `<div class="mbar" style="margin-top:10px"><i style="width:${(el / tot * 100).toFixed(0)}%"></i></div>`;
+    const rows = BIO.map(([f, n, u]) => {
+      const a = goalBase(g, f), c = latestVal(f);
+      if (a == null || c == null) return "";
+      const d = c - a, tgt = f === "weight" && g.targetWeight ? ` → цель ${fmtNum(g.targetWeight)}` : "";
+      return `<div class="gl"><span>${n}</span><span>${fmtNum(a)} → <b>${fmtNum(c)}</b> ${u}${tgt}</span><b class="${d > 0 ? "up" : d < 0 ? "down" : ""}">${f === "height" ? "" : fmtDelta(r1(d))}</b></div>`;
+    }).join("");
+    h += (rows ? `<div style="margin-top:8px">${rows}</div>` : '<div class="sub" style="margin-top:8px">Добавь замеры, чтобы увидеть прогресс цели.</div>') + "</div>" +
+      `<div class="row" style="margin-top:0"><button class="btn soft" style="margin:0" data-act="g-open">Изменить цель</button><button class="btn danger" style="margin:0" data-act="g-end">Завершить цель</button></div>`;
+  }
+  h += `<div class="sec"><h2>${ed ? "Правка замера" : "Новый замер"}</h2></div><div class="card"><label class="field-l" for="bf-day">Дата</label><input id="bf-day" type="date" value="${ed ? esc(ed.day) : today()}" max="${today()}">` +
+    '<div class="bgrid">' + BIO.map(([f, n, u]) => {
+      const last = latestVal(f);
+      return `<div><label class="field-l" for="bf-${f}">${n}, ${u}</label><input id="bf-${f}" inputmode="decimal" value="${ed && ed.vals[f] != null ? fmtNum(ed.vals[f]) : ""}" placeholder="${last != null ? fmtNum(last) : "—"}"></div>`;
+    }).join("") + "</div>" +
+    `<button class="btn primary" data-act="bio-save">${ed ? "Сохранить изменения" : "Сохранить замер"}</button>` + (ed ? '<button class="btn plain" data-act="bio-cancel">Отмена</button>' : "") + "</div>";
+  h += '<div class="sec"><h2>История замеров</h2></div>';
+  if (!es.length) h += '<div class="card empty">Замеров пока нет</div>';
+  es.forEach((e, i) => {
+    const prev = es.slice(i + 1);
+    const items = BIO.filter(([f]) => e.vals[f] != null).map(([f, n, u]) => {
+      const pv = prev.find(x => x.vals[f] != null), d = pv ? e.vals[f] - pv.vals[f] : null;
+      return `<span class="chipv">${n} <b>${fmtNum(e.vals[f])}</b> ${u}${d != null && f !== "height" && Math.abs(d) > 0.001 ? ` <i class="${d > 0 ? "up" : "down"}">${fmtDelta(r1(d))}</i>` : ""}</span>`;
+    }).join("");
+    h += `<div class="card"><div style="display:flex;align-items:center;gap:8px"><div class="b" style="flex:1">${fmtDay(e.day)}</div><button class="link" data-act="bio-edit" data-id="${esc(e.id)}">Изменить</button><button class="ico" data-act="bio-del" data-id="${esc(e.id)}" aria-label="Удалить замер от ${fmtDay(e.day)}">${icon("x", 16)}</button></div><div class="chips">${items}</div></div>`;
+  });
+  return h;
+}
+function recMonths(type, target) {
+  const w = latestVal("weight");
+  if (target > 0 && w && type !== "keep") { const m = Math.abs(target - w) / (type === "gain" ? 0.35 : 0.5) / 4.3; return [1, 2, 3, 6].find(x => x >= m) || 6; }
+  return type === "cut" ? 2 : 3;
+}
+function viewGoalSheet() {
+  const s = S.gsheet, rec = recMonths(s.type, parseNum(s.target));
+  return '<div class="scrim" data-act="g-close"></div><div class="sheet" role="dialog" aria-label="Цель"><div class="sheet-in"><div class="grab"></div>' +
+    '<div class="sheet-h" style="margin-bottom:8px"><div class="h1">Цель</div><button class="link" data-act="g-close">Закрыть</button></div>' +
+    '<div class="seg" role="group" aria-label="Тип цели">' + Object.entries(GOALS).map(([k, l]) => `<button class="${k === s.type ? "on" : ""}" data-act="g-type" data-t="${k}">${l}</button>`).join("") + "</div>" +
+    '<label class="field-l" style="margin-top:12px">Срок</label><div class="periods" style="margin-top:0" role="group" aria-label="Срок цели">' +
+    [1, 2, 3, 6].map(m => `<button class="${m === s.months ? "on" : ""}" data-act="g-months" data-m="${m}">${m} мес</button>`).join("") + "</div>" +
+    `<div class="sub" id="g-rec" style="margin-top:6px">Рекомендуем: ${rec} мес.${s.type === "gain" ? " Набирать лучше 0,25–0,5 кг в неделю." : s.type === "cut" ? " Худеть безопаснее 0,3–0,7 кг в неделю." : ""}</div>` +
+    (s.type === "keep" ? "" : `<label class="field-l" for="g-target" style="margin-top:12px">Желаемый вес, кг (необязательно)</label><input id="g-target" inputmode="decimal" value="${esc(s.target)}" placeholder="например, 80">`) +
+    '<button class="btn primary" data-act="g-save">Сохранить цель</button></div></div>';
 }
 
 /* ---- действия ---- */
-const kvOpen = ctx => { S.kvp = { ctx, q: "", online: [], sel: null, scan: false, manual: false, msg: "", code: "" }; render(); };
+const kvOpen = (ctx, meal) => { S.kvp = { ctx, q: "", online: [], sel: null, scan: false, manual: false, msg: "", code: "", draft: null, meal: meal || autoMeal() }; render(); };
 const kvClose = () => { stopScan(); S.kvp = null; render(); };
 function kvAddEntry(p, g) {
   if (S.kvp.ctx === "calc") S.calc.rows.push({ pid: p.id, g });
-  else { const m = mac(p, g); N().log.push({ id: uid8(), day: S.kvDay || today(), name: p.name, g, ...m }); persist(); }
+  else { const m = mac(p, g); N().log.push({ id: uid8(), day: S.kvDay || today(), meal: S.kvp.meal || autoMeal(), name: p.name, g, ...m }); persist(); }
 }
 Object.assign(actions, {
   "kv-go": b => { S.kv = b.dataset.to; render(); },
-  "kv-pick": b => kvOpen(b.dataset.ctx),
+  "kv-pick": b => kvOpen(b.dataset.ctx, b.dataset.meal),
   "kv-close": kvClose,
-  "kv-sel": b => { const k = S.kvp, p = b.dataset.src === "l" ? N().prods.slice().reverse()[+b.dataset.i] : k.online[+b.dataset.i]; k.sel = p && p.id ? p : keepProd(p); render(); },
+  "kv-meal": b => { S.kvp.meal = b.dataset.m; const g = ($("#kv-g") || {}).value; render(); const e = $("#kv-g"); if (e && g) { e.value = g; e.dispatchEvent(new Event("input", { bubbles: true })); } },
+  "kv-quick": b => {
+    const x = recentFoods()[+b.dataset.i]; if (!x) return;
+    const p = N().prods.find(q => q.name === x.name) || keepProd({ name: x.name, k: r1(x.k / x.g * 100), b: r1(x.b / x.g * 100), j: r1(x.j / x.g * 100), u: r1(x.u / x.g * 100), code: "" });
+    kvOpen("log", autoMeal()); S.kvp.sel = p; render();
+  },
+  "kv-sel": b => {
+    const k = S.kvp, p = b.dataset.src === "l" ? N().prods.slice().reverse()[+b.dataset.i] : k.online[+b.dataset.i];
+    if (!p) return;
+    if (p.partial) { k.draft = p; k.manual = true; k.msg = "В базе не все значения. Проверь и дополни."; return render(); }
+    k.sel = p.id ? p : keepProd(p); render();
+  },
   "kv-add": () => {
     const g = num("kv-g"); if (!(g > 0 && g < 10000)) return note("Укажи вес в граммах");
     kvAddEntry(S.kvp.sel, g); stopScan(); S.kvp = null; render();
   },
   "kv-scan": async () => { S.kvp.scan = true; S.kvp.msg = ""; render(); startScan(); },
   "kv-scan-stop": () => { stopScan(); S.kvp.scan = false; render(); },
+  "kv-photo": () => { const f = $("#kv-photo"); if (f) f.click(); },
   "kv-code-ok": () => lookup(($("#kv-code") || {}).value || ""),
   "kv-online": async () => {
     const q = ($("#kv-q") || {}).value || ""; if (q.trim().length < 2) return note("Введи название для поиска");
     S.kvp.q = q; S.kvp.msg = "Ищу…"; render();
-    try { S.kvp.online = await offSearch(q); S.kvp.msg = S.kvp.online.length ? "" : "В базе ничего не нашлось."; } catch (e) { S.kvp.msg = "Нет связи с базой продуктов."; }
+    try { S.kvp.online = await offSearch(q); S.kvp.msg = S.kvp.online.length ? "" : "В онлайн-базе ничего не нашлось. Попробуй другое слово или добавь продукт вручную."; }
+    catch (e) { S.kvp.msg = e.message + ". Проверь интернет или добавь продукт вручную."; }
     render();
   },
-  "kv-manual": () => { S.kvp.manual = true; S.kvp.msg = ""; render(); },
+  "kv-manual": () => { S.kvp.manual = true; S.kvp.draft = null; S.kvp.msg = ""; render(); },
   "kv-manual-ok": () => {
     const name = cleanTitle(($("#kv-mn") || {}).value || ""), v = ["k", "b", "j", "u"].map(x => num("kv-m" + x) || 0);
-    if (!name || !(v[0] >= 0)) return note("Укажи название и калории");
-    S.kvp.sel = keepProd({ name, k: v[0], b: v[1], j: v[2], u: v[3], code: S.kvp.code || "" }); S.kvp.manual = false; render();
+    if (!name || !(v[0] >= 0) || !($("#kv-mk") || {}).value) return note("Укажи название и калории");
+    S.kvp.sel = keepProd({ name, k: v[0], b: v[1], j: v[2], u: v[3], code: (S.kvp.draft && S.kvp.draft.code) || S.kvp.code || "" }); S.kvp.manual = false; S.kvp.draft = null; render();
   },
   "kv-rm": b => { S.calc.rows.splice(+b.dataset.i, 1); render(); },
   "kv-calc-reset": async () => { if (await ask("Очистить блюдо?")) { S.calc = { name: "", rows: [], cooked: "", portion: "" }; render(); } },
@@ -1812,26 +2157,74 @@ Object.assign(actions, {
     const c = S.calc, ck = parseNum(c.cooked), por = parseNum(c.portion);
     if (!(ck > 0 && por > 0)) return note("Введи вес готового блюда и свою порцию");
     const m = mac(per100(calcTotals().tot, ck), por);
-    N().log.push({ id: uid8(), day: today(), name: cleanTitle(c.name) || "Блюдо", g: por, ...m }); persist();
+    N().log.push({ id: uid8(), day: today(), meal: autoMeal(), name: cleanTitle(c.name) || "Блюдо", g: por, ...m }); persist();
     S.kvDay = today(); S.kv = "log"; render();
   },
-  "kv-day": b => { S.kvDay = addDays(S.kvDay || today(), +b.dataset.d); render(); },
+  "kv-day": b => { const n = addDays(S.kvDay || today(), +b.dataset.d); if (n > today()) return; S.kvDay = n; render(); },
   "kv-del": b => { N().log = N().log.filter(x => x.id !== b.dataset.id); persist(); render(); },
-  "kv-goal": b => { N().goal = b.dataset.g; persist(); render(); },
-  "kv-w-save": async () => {
-    const w = num("kv-w"); if (!(w > 20 && w < 500)) return note("Проверь вес");
-    try { await api("/bodyweight", "POST", { weight: w, day: today() }); } catch (e) { return note(e.message); }
-    render();
+  "kv-goal": b => { N().goal = b.dataset.g; if (B().goal) B().goal.type = b.dataset.g; persist(); render(); },
+  "kv-w-save": () => {
+    const w = num("kv-w"), day = ($("#kv-wd") || {}).value || today();
+    if (!(w > 20 && w < 500)) return note("Проверь вес");
+    if (!ymdOk(day) || day > today()) return note("Проверь дату");
+    upsertWeight(day, w); persist(); render();
   },
-  "kv-w-del": async b => { await api("/bodyweight/" + b.dataset.day, "DELETE"); render(); },
+  "kv-w-edit": b => { S.wedit = b.dataset.day; render(); },
+  "kv-we-close": () => { S.wedit = null; render(); },
+  "kv-we-save": async () => {
+    const old = S.wedit, day = ($("#we-d") || {}).value, w = num("we-w");
+    if (!(w > 20 && w < 500)) return note("Проверь вес");
+    if (!ymdOk(day) || day > today()) return note("Проверь дату");
+    if (day !== old && D.bodyweight.some(x => x.day === day) && !(await ask(`На ${fmtDay(day)} уже есть вес. Заменить его?`))) return;
+    D.bodyweight = D.bodyweight.filter(x => x.day !== old);
+    upsertWeight(day, w); persist(); S.wedit = null; render();
+  },
+  "kv-we-del": async () => {
+    if (!(await ask("Удалить эту запись веса?"))) return;
+    D.bodyweight = D.bodyweight.filter(x => x.day !== S.wedit); persist(); S.wedit = null; render();
+  },
+  /* биометрия и цель */
+  "g-open": () => { const g = B().goal; S.gsheet = { type: g ? g.type : N().goal || "gain", months: g ? g.months : 3, target: g && g.targetWeight ? fmtNum(g.targetWeight) : "" }; S.gsheet.months = g ? g.months : recMonths(S.gsheet.type, 0); render(); },
+  "g-close": () => { S.gsheet = null; render(); },
+  "g-type": b => { const s = S.gsheet; s.type = b.dataset.t; if (s.type === "keep") s.target = ""; s.months = recMonths(s.type, parseNum(s.target)); render(); },
+  "g-months": b => { S.gsheet.months = +b.dataset.m; render(); },
+  "g-save": () => {
+    const s = S.gsheet, t = parseNum(s.target), bb = B();
+    if (s.target && s.type !== "keep" && !(t > 20 && t < 500)) return note("Проверь желаемый вес");
+    if (bb.goal) { bb.goal.type = s.type; bb.goal.months = s.months; bb.goal.targetWeight = s.type !== "keep" && t > 0 ? t : null; }
+    else bb.goal = { type: s.type, months: s.months, startDay: today(), targetWeight: s.type !== "keep" && t > 0 ? t : null, base: snapshot() };
+    N().goal = s.type; persist(); S.gsheet = null; render();
+  },
+  "g-end": async () => { if (await ask("Завершить цель? Замеры останутся.")) { B().goal = null; persist(); render(); } },
+  "bio-save": () => {
+    const day = ($("#bf-day") || {}).value || today(), vals = {};
+    if (!ymdOk(day) || day > today()) return note("Проверь дату");
+    for (const [f, n] of BIO) {
+      const raw = ($("#bf-" + f) || {}).value;
+      if (raw == null || String(raw).trim() === "") continue;
+      const v = parseNum(raw), [lo, hi] = BIO_RANGE[f] || [5, 300];
+      if (!(v >= lo && v <= hi)) return note(`Проверь значение: ${n}`);
+      vals[f] = v;
+    }
+    if (!Object.keys(vals).length) return note("Впиши хотя бы одно значение");
+    const bb = B();
+    if (S.bedit) { const e = bb.entries.find(x => x.id === S.bedit); if (e) { e.day = day; e.vals = vals; } }
+    else bb.entries.push({ id: uid8(), day, vals });
+    if (vals.weight != null) upsertWeight(day, vals.weight);
+    persist(); S.bedit = null; render();
+  },
+  "bio-edit": b => { S.bedit = b.dataset.id; render(); window.scrollTo(0, 0); },
+  "bio-cancel": () => { S.bedit = null; render(); },
+  "bio-del": async b => { if (await ask("Удалить этот замер?")) { B().entries = B().entries.filter(x => x.id !== b.dataset.id); if (S.bedit === b.dataset.id) S.bedit = null; persist(); render(); } },
 });
 document.addEventListener("input", e => {
   const t = e.target;
-  if (t.id === "kv-q" && S.kvp) { S.kvp.q = t.value; $("#kv-list").innerHTML = pickList(); }
+  if (t.id === "kv-q" && S.kvp) { S.kvp.q = t.value; $("#kv-list").innerHTML = foodPickList(); }
   else if (t.id === "kv-dn") S.calc.name = t.value;
   else if (t.id === "kv-cooked" || t.id === "kv-portion") { S.calc[t.id === "kv-cooked" ? "cooked" : "portion"] = t.value; $("#kv-res").innerHTML = calcRes(); }
   else if (t.id === "kv-g" && S.kvp && S.kvp.sel) { const g = parseNum(t.value); $("#kv-gr").textContent = g > 0 ? macTxt(mac(S.kvp.sel, g)) : ""; }
   else if (t.id === "kv-kg") { N().kcalGoal = Math.max(0, parseInt(t.value, 10) || 0); persist(); }
+  else if (t.id === "g-target" && S.gsheet) { S.gsheet.target = t.value; const r = recMonths(S.gsheet.type, parseNum(t.value)), el = $("#g-rec"); if (el) el.textContent = el.textContent.replace(/Рекомендуем: \d+ мес/, "Рекомендуем: " + r + " мес"); }
 });
 
 /* ---------- Telegram ---------- */
