@@ -307,8 +307,6 @@
 <input id="file" type="file" accept="image/*" hidden>
 <nav class="tabs" aria-label="Разделы"><div class="tabs-in">
   <button data-tab="diary" class="on"></button>
-  <button data-tab="history"></button>
-  <button data-tab="progress"></button>
   <button data-tab="settings"></button>
 </div></nav>
 <div id="dlg" class="dlg" hidden>
@@ -641,7 +639,7 @@ const S = {
   tab: "diary", view: "list",      // внутри «Дневника»: list | edit | pick | session
   workouts: null, catalog: [], session: null, skew: 0,
   sheet: null, zoom: null, draft: null, pickFor: "draft", q: "", openEx: null, inputs: {}, photoIdx: null,
-  hist: null, hedit: null, dropIn: {}, weekOff: 0, dayKey: null, wmenu: null, sel: null, sum: { period: (() => { try { const v = localStorage.getItem("gym-period"); return ["week", "month", "quarter", "all"].includes(v) ? v : "all"; } catch (e) { return "all"; } })(), metric: "top_weight", exercise: "", data: null }, lastKey: "",
+  hist: null, hedit: null, hfrom: null, dropIn: {}, weekOff: 0, dayKey: null, wmenu: null, sel: null, sum: { period: (() => { try { const v = localStorage.getItem("gym-period"); return ["week", "month", "quarter", "all"].includes(v) ? v : "all"; } catch (e) { return "all"; } })(), metric: "top_weight", exercise: "", data: null }, lastKey: "",
 };
 
 /* ---------- диалоги (alert и confirm в артефактах не работают) ---------- */
@@ -699,8 +697,6 @@ const ICON = {
 };
 const icon = (n, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]}</svg>`;
 $(".tabs [data-tab=diary]").innerHTML = icon("list", 22) + "Дневник";
-$(".tabs [data-tab=history]").innerHTML = icon("history", 22) + "История";
-$(".tabs [data-tab=progress]").innerHTML = icon("trend", 22) + "Прогресс";
 $(".tabs [data-tab=settings]").innerHTML = icon("gear", 22) + "Настройки";
 
 async function loadWorkouts() { S.workouts = await api("/workouts"); }
@@ -772,8 +768,16 @@ const relDays = day => {
   const n = Math.round((new Date(t.getFullYear(), t.getMonth(), t.getDate()) - new Date(y, m - 1, d)) / 864e5);
   return n <= 0 ? "сегодня" : n === 1 ? "вчера" : `${n} дн назад`;
 };
+const backBar = t => `<div class="kick" style="margin-left:0"><button class="back" data-act="back" aria-label="Назад">${icon("back", 22)}</button>${t}</div>`;
+function viewHub() {
+  const n = D.sessions.filter(x => x.finishedAt != null).length;
+  return memWarn() + backBar("Прогресс") + '<div class="sec" style="margin-top:6px"><h2>Прогресс</h2></div>' +
+    `<button class="wcard" data-act="hub" data-to="history" style="min-height:76px">${icon("history", 26)}<span style="flex:1;min-width:0"><span class="t" style="display:block">История</span><span class="x" style="display:block">Проведённые тренировки, рекорды, правка · ${n}</span></span>${icon("right")}</button>` +
+    `<button class="wcard" data-act="hub" data-to="progress" style="min-height:76px">${icon("trend", 26)}<span style="flex:1;min-width:0"><span class="t" style="display:block">Прогресс и вес</span><span class="x" style="display:block">Графики по упражнениям, вес тела, лучшие результаты</span></span>${icon("right")}</button>`;
+}
 function viewList() {
   let h = memWarn() + `<div class="kick" style="margin-left:0">${kickDate()}${weekNav()}</div>` + weekStrip(true);
+  h += `<button class="chipbtn" data-act="open-hub" style="margin-bottom:10px">${icon("trend", 18)} Прогресс ${icon("right", 16)}</button>`;
   if (S.session) {
     h += `<button class="banner" data-act="resume">${icon("clock", 22)}<span class="grow"><b>Идёт тренировка</b><span>${esc(S.session.name)}</span></span>` +
       `<span class="tm" data-timer>${fmtDur(elapsed())}</span></button>`;
@@ -1249,17 +1253,24 @@ function render() {
     h = { list: viewList, edit: viewEdit, pick: viewPick, session: viewSession, day: viewDay }[S.view]();
     if (S.view === "list" && S.sheet) h += viewSheet();
     if (S.view === "list" && S.wmenu) h += viewWMenu();
-  } else if (S.tab === "history") h = viewHistory();
+  } else if (S.tab === "hub") h = viewHub();
+  else if (S.tab === "history") h = (S.hedit ? "" : backBar("История")) + viewHistory();
   else if (S.tab === "settings") h = viewSettings();
-  else h = viewProgress();
+  else h = backBar("Прогресс и вес") + viewProgress();
   if (S.zoom) h += `<div class="scrim zoom" data-act="unzoom"><img src="${esc(S.zoom)}" alt="Фото упражнения"></div>`;
   app.innerHTML = h;
-  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === S.tab));
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === (["hub", "history", "progress"].includes(S.tab) ? "diary" : S.tab)));
   window.scrollTo(0, y);
   if (S.tab === "progress") drawProgressChart();
 }
 function goBack() {
-  if (S.hedit && !S.zoom) { S.hedit = null; loadHistory().then(render); return; }
+  if (S.hedit && !S.zoom) {
+    S.hedit = null;
+    if (S.hfrom) { S.hfrom = null; S.tab = "diary"; S.view = "day"; }
+    loadHistory().then(render); return;
+  }
+  if (S.tab === "history" || S.tab === "progress") { showTab("hub"); return; }
+  if (S.tab === "hub") { showTab("diary"); return; }
   if (S.zoom) S.zoom = null;
   else if (S.sheet) S.sheet = null;
   else if (S.wmenu) S.wmenu = null;
@@ -1443,7 +1454,9 @@ const actions = {
     if (!(await ask("Удалить запись веса?"))) return;
     try { await api("/bodyweight/" + b.dataset.day, "DELETE"); await calc(); } catch (e) { note(e.message); }
   },
-  "h-edit": async b => { S.hedit = b.dataset.id; try { await loadCatalog(); } catch (e) {} render(); },
+  "open-hub": () => { showTab("hub"); },
+  hub: b => { showTab(b.dataset.to); },
+  "h-edit": async b => { S.hfrom = S.tab === "diary" ? "day" : null; S.tab = "history"; S.hedit = b.dataset.id; try { await loadCatalog(); } catch (e) {} render(); },
   "hdel-drop": b => {
     const s = histSession(), x = s && s.sets.find(y => y.id === b.dataset.id);
     if (!x || !x.drops) return;
