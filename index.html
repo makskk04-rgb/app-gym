@@ -156,7 +156,7 @@
   .selwrap { position: relative; margin: 8px 0 6px; }
   .selwrap select { appearance: none; -webkit-appearance: none; padding-right: 40px; height: 44px; }
   .selwrap svg { position: absolute; right: 12px; top: 13px; color: var(--muted); pointer-events: none; }
-  canvas { display: block; width: 100%; height: 220px; }
+  canvas { display: block; width: 100%; height: 220px; touch-action: pan-y; }
   .illu { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 40px 24px; color: var(--muted); }
   .illu b { color: var(--fg); }
 
@@ -171,6 +171,10 @@
          background: var(--card); color: var(--fg); display: flex; align-items: center; gap: 12px; font-weight: 600; }
   .opt.on { border-color: var(--accent); }
   .sw { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line); }
+  .hs { padding: 6px 0; }
+  .hs input { width: auto; flex: 1; min-width: 0; height: 44px; padding: 0 4px; text-align: center; background: var(--bg); }
+  .hs .u { color: var(--muted); }
+  .readout { min-height: 24px; margin: 8px 2px 2px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .dlg { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--scrim); }
   .dlg[hidden] { display: none; }
   .dlg-box { width: 100%; max-width: 340px; padding: 18px; border-radius: 16px; background: var(--bg); color: var(--fg); }
@@ -499,6 +503,11 @@ function saveBodyweight(body) {
   return { ok: true };
 }
 
+function deleteBodyweight(day) {
+  D.bodyweight = D.bodyweight.filter(x => x.day !== day); saveApp();
+  return { ok: true };
+}
+
 /* ---- маршрутизатор: интерфейс обращается к данным как к API ---- */
 async function api(path, method = "GET", body) {
   const [p, qs] = path.split("?");
@@ -521,6 +530,7 @@ async function api(path, method = "GET", body) {
   if (p === "/history") return history();
   if (p === "/summary") return summary(q.get("exercise"), q.get("since"));
   if (p === "/bodyweight") return saveBodyweight(body);
+  if ((r = p.match(/^\/bodyweight\/([^/]+)$/)) && m === "DELETE") return deleteBodyweight(r[1]);
   bad("Неизвестный запрос: " + p);
 }
 
@@ -531,7 +541,7 @@ const S = {
   tab: "diary", view: "list",      // внутри «Дневника»: list | edit | pick | session
   workouts: null, catalog: [], session: null, skew: 0,
   sheet: null, zoom: null, draft: null, pickFor: "draft", q: "", openEx: null, inputs: {}, photoIdx: null,
-  hist: null, sum: { period: "all", metric: "top_weight", exercise: "", data: null, reqPeriod: "all" }, lastKey: "",
+  hist: null, hedit: null, sel: null, sum: { period: "all", metric: "top_weight", exercise: "", data: null }, lastKey: "",
 };
 
 /* ---------- диалоги (alert и confirm в артефактах не работают) ---------- */
@@ -790,17 +800,71 @@ function recBadges(r) {
   return b.map(t => `<span class="badge">${icon("trophy", 13)}${t}</span>`).join("");
 }
 function viewHistory() {
+  if (S.hedit) return viewHEdit();
   if (!S.hist) return memWarn() + '<h2>История</h2><div class="card empty">Загрузка…</div>';
   if (!S.hist.length) return memWarn() + '<h2>История</h2><div class="card empty">Здесь появятся завершённые тренировки.<br>Начни первую на вкладке «Дневник».</div>';
   return memWarn() + "<h2>История тренировок</h2>" + S.hist.map(s =>
     `<article class="card"><div class="hs-top"><div><div class="b" style="font-size:18px">${esc(s.name)}</div>` +
     `<div class="sub">${fmtDay(s.day)}${s.imported ? "" : ", " + fmtClock(s.started_at)}</div></div>` +
-    (s.records ? `<span class="badge">${icon("trophy", 14)}${s.records} ${plural(s.records, RECS)}</span>` : "") + `</div>` +
+    `<div style="display:flex;flex-direction:column;align-items:flex-end">` +
+    (s.records ? `<span class="badge">${icon("trophy", 14)}${s.records} ${plural(s.records, RECS)}</span>` : "") +
+    `<button class="link" data-act="h-edit" data-id="${esc(s.id)}" aria-label="Изменить тренировку ${esc(s.name)} от ${fmtDay(s.day)}">Изменить</button></div></div>` +
     `<div class="meta"><span>${icon("clock", 16)}${fmtMin(s.duration)}</span><span>Объём ${fmtNum(s.volume)} кг</span><span>${s.sets} ${plural(s.sets, SETS)}</span></div>` +
     s.exercises.map(e =>
       `<div class="hx"><div class="hx-n">${esc(e.name)}${recBadges(e.records)}</div>` +
       `<div class="hx-s">${e.sets.map(x => (x.weight ? fmtNum(x.weight) + "×" + x.reps : x.reps + " повт.")).join(" · ")}</div></div>`).join("") +
     `</article>`).join("");
+}
+const histSession = () => D.sessions.find(x => x.id === S.hedit && x.finishedAt != null);
+function viewHEdit() {
+  const s = histSession();
+  if (!s) { S.hedit = null; return viewHistory(); }
+  const mins = Math.max(1, Math.round((s.finishedAt - s.startedAt) / 60000));
+  let h = memWarn() + header("Правка тренировки", fmtDay(s.day));
+  h += `<div class="card"><label class="field-l" for="hn">Название</label><input id="hn" value="${esc(s.name)}" maxlength="40" autocomplete="off">` +
+    `<div class="row"><div style="flex:1;min-width:0"><label class="field-l" for="hd">Дата</label><input id="hd" type="date" value="${esc(s.day)}" max="${today()}"></div>` +
+    `<div style="flex:1;min-width:0"><label class="field-l" for="hm">Длительность, мин</label><input id="hm" type="text" inputmode="numeric" value="${mins}"></div></div></div>`;
+  h += s.exercises.map(e => {
+    const ss = s.sets.filter(x => x.exercise === e.name);
+    return `<div class="card"><div style="display:flex;align-items:center;gap:8px"><div class="b" style="flex:1;min-width:0;overflow-wrap:anywhere">${esc(e.name)}</div>` +
+      `<button class="ico" data-act="hdel-ex" data-name="${esc(e.name)}" aria-label="Убрать упражнение ${esc(e.name)}">${icon("x", 16)}</button></div>` +
+      ss.map((x, k) => `<div class="setrow hs"><span class="n">${k + 1}</span>` +
+        `<input data-hs="${esc(x.id)}" data-f="w" type="text" inputmode="decimal" value="${fmtNum(x.weight)}" aria-label="Вес, подход ${k + 1}"><span class="u">кг ×</span>` +
+        `<input data-hs="${esc(x.id)}" data-f="r" type="text" inputmode="numeric" value="${x.reps}" aria-label="Повторы, подход ${k + 1}">` +
+        `<button class="ico" data-act="hdel-set" data-id="${esc(x.id)}" aria-label="Удалить подход ${k + 1}">${icon("x", 16)}</button></div>`).join("") +
+      `<button class="btn plain" style="margin-top:6px;background:var(--bg);color:var(--link)" data-act="hadd-set" data-name="${esc(e.name)}">${icon("plus", 18)} Подход</button></div>`;
+  }).join("");
+  h += `<div class="card"><label class="field-l" for="hnew">Добавить упражнение</label><div style="display:flex;gap:8px">` +
+    `<input id="hnew" list="exlist" placeholder="Название" maxlength="60" autocomplete="off">` +
+    `<datalist id="exlist">${S.catalog.map(c => `<option value="${esc(c.name)}">`).join("")}</datalist>` +
+    `<button class="btn" style="width:auto;margin:0;min-height:48px;border-radius:10px;background:var(--bg);color:var(--link)" data-act="hadd-ex">Добавить</button></div></div>`;
+  h += `<button class="btn primary" data-act="back">Готово</button><button class="btn danger" data-act="hdel">Удалить тренировку</button>`;
+  return h;
+}
+async function hChange(t) {
+  const s = histSession();
+  if (!s) return;
+  const fail = async msg => { await note(msg); render(); };
+  if (t.dataset.hs) {
+    const x = s.sets.find(y => y.id === t.dataset.hs);
+    if (!x) return;
+    if (t.dataset.f === "w") { const v = parseNum(t.value); if (!(v >= 0 && v <= 1000)) return fail("Проверь вес"); x.weight = v; }
+    else { const v = parseInt(t.value, 10); if (!(v >= 1 && v <= 1000)) return fail("Проверь повторы"); x.reps = v; }
+    t.value = t.dataset.f === "w" ? fmtNum(x.weight) : x.reps;
+  } else if (t.id === "hn") {
+    s.name = cleanTitle(t.value) || s.name; t.value = s.name;
+  } else if (t.id === "hd") {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t.value);
+    if (!m || t.value > today()) return fail("Проверь дату");
+    const old = new Date(s.startedAt);
+    const start = new Date(+m[1], +m[2] - 1, +m[3], old.getHours(), old.getMinutes()).getTime();
+    s.finishedAt += start - s.startedAt; s.startedAt = start; s.day = t.value;
+  } else if (t.id === "hm") {
+    const v = parseInt(t.value, 10);
+    if (!(v >= 1 && v <= 1440)) return fail("Проверь длительность");
+    s.finishedAt = s.startedAt + v * 60000;
+  } else return;
+  saveSession(s);
 }
 
 /* ---------- Настройки ---------- */
@@ -829,32 +893,46 @@ function viewSettings() {
 const PERIODS = { week: ["Неделя", 7], month: ["Месяц", 30], quarter: ["3 месяца", 90], all: ["Всё время", 0] };
 const METRICS = [["weight", "Вес тела"], ["top_weight", "Рабочий вес"], ["e1rm", "1ПМ"], ["volume", "Объём"]];
 function viewProgress() {
-  const m = S.sum;
+  const m = S.sum, d = m.data;
   const used = S.catalog.filter(c => c.prev);
-  let h = memWarn() + `<div class="card"><label class="field-l" for="bw">Вес тела сегодня, кг</label><div style="display:flex;gap:8px">` +
-    `<input id="bw" type="text" inputmode="decimal" placeholder="например 78,4" autocomplete="off">` +
-    `<button class="btn" style="width:auto;margin:0;min-height:48px;border-radius:10px;background:var(--bg);color:var(--link)" data-act="save-bw">Сохранить</button></div></div>`;
-  h += `<div class="periods" role="group" aria-label="Период">` +
+  let h = memWarn() + `<div class="periods" style="margin-top:0" role="group" aria-label="Период">` +
     Object.entries(PERIODS).map(([k, [l]]) => `<button data-act="period" data-p="${k}" class="${m.period === k ? "on" : ""}">${l}</button>`).join("") + `</div>`;
-  h += `<button class="btn primary" data-act="calc">${icon("trend")} Рассчитать прогресс</button>`;
-  if (!m.data) {
-    return h + `<div class="card illu" style="margin-top:10px">${icon("chart", 44)}<b>Здесь появится твой прогресс</b>` +
-      `<span>Выбери период и нажми «Рассчитать прогресс»: покажу, как изменились вес тела и рабочие веса, и построю график.</span></div>`;
-  }
-  const d = m.data, bw = d.bodyweight, ex = d.exercise;
-  const dates = [...bw.points.map(p => p.day), ...(ex ? ex.days.map(x => x.day) : [])].sort();
-  const range = dates.length ? `, ${fmtDay(dates[0])} – ${fmtDay(dates[dates.length - 1])}` : "";
-  h += `<h2>Итоги · ${PERIODS[m.reqPeriod][0].toLowerCase()}${range}</h2><div class="card stats">` +
+  if (!d) return h + '<div class="card empty" style="margin-top:10px">Считаю…</div>';
+  const bw = d.bodyweight, ex = d.exercise;
+  h += `<div class="card stats" style="margin-top:10px">` +
+    `<div class="stat"><b>${d.workouts}</b><span>Тренировок<br>за период</span></div>` +
     `<div class="stat"><b>${bw.delta == null ? "—" : fmtDelta(bw.delta) + " кг"}</b><span>Вес тела<br>${bw.first == null ? "нет записей" : bw.points.length > 1 ? fmtNum(bw.first) + " → " + fmtNum(bw.last) : "одна запись: " + fmtNum(bw.last)}</span></div>` +
-    `<div class="stat"><b>${ex && ex.delta != null ? fmtDelta(ex.delta) + " кг" : "—"}</b><span>${ex ? esc(ex.name) + "<br>" + (ex.delta != null ? fmtNum(ex.first) + " → " + fmtNum(ex.last) : "мало данных") : "Нет данных<br>по упражнению"}</span></div>` +
-    `<div class="stat"><b>${d.workouts}</b><span>Тренировок<br>за период</span></div></div>`;
+    `<div class="stat"><b>${ex && ex.delta != null ? fmtDelta(ex.delta) + " кг" : "—"}</b><span>${ex ? esc(ex.name) + "<br>" + (ex.delta != null ? fmtNum(ex.first) + " → " + fmtNum(ex.last) : "мало данных") : "Нет данных<br>по упражнению"}</span></div></div>`;
+
+  const pts = chartPoints();
   h += `<div class="card"><div class="seg" role="group" aria-label="Что показывать на графике">` +
     METRICS.map(([k, l]) => `<button data-act="metric" data-m="${k}" class="${m.metric === k ? "on" : ""}">${l}</button>`).join("") + `</div>`;
-  if (used.length) {
+  if (used.length && m.metric !== "weight") {
     h += `<label class="vh" for="pex">Упражнение</label><div class="selwrap"><select id="pex">` +
       used.map(c => `<option value="${esc(c.name)}" ${c.name === m.exercise ? "selected" : ""}>${esc(c.name)}</option>`).join("") + `</select>${icon("down", 18)}</div>`;
   }
-  return h + `<canvas id="chart" role="img" aria-label="График прогресса"></canvas></div>`;
+  h += `<div id="readout" class="readout" aria-live="polite"></div><canvas id="chart" role="img" aria-label="График прогресса"></canvas>`;
+  if (pts.length) {
+    const ys = pts.map(p => p.y);
+    h += `<div class="meta"><span>Мин ${fmtNum(Math.min(...ys))}</span><span>Макс ${fmtNum(Math.max(...ys))}</span><span>Точек: ${pts.length}</span></div>`;
+  } else if (m.metric === "weight") h += `<div class="sub" style="margin-top:6px">Добавь вес тела ниже, и он появится на графике.</div>`;
+  h += `<div class="sub" style="margin-top:4px">Коснись графика, чтобы увидеть значение в точке.</div></div>`;
+
+  h += `<h2>Вес тела</h2><div class="card"><div class="row" style="margin-top:0"><div style="flex:1;min-width:0"><label class="field-l" for="bw">Вес, кг</label>` +
+    `<input id="bw" type="text" inputmode="decimal" placeholder="например 78,4" autocomplete="off"></div>` +
+    `<div style="flex:1;min-width:0"><label class="field-l" for="bwd">Дата</label><input id="bwd" type="date" value="${today()}" max="${today()}"></div></div>` +
+    `<button class="btn primary" data-act="save-bw">Сохранить вес</button>`;
+  const recent = D.bodyweight.slice().sort((x, y) => (x.day < y.day ? 1 : -1)).slice(0, 5);
+  h += recent.map(r => `<div class="setrow" style="margin-top:6px"><span class="v">${fmtDay(r.day)} · ${fmtNum(r.weight)} кг</span>` +
+    `<button class="ico" data-act="del-bw" data-day="${esc(r.day)}" aria-label="Удалить запись от ${fmtDay(r.day)}">${icon("x", 16)}</button></div>`).join("") + `</div>`;
+
+  const prs = used.map(c => ({ c, pr: progressFor(c.name, null).pr })).filter(x => x.pr);
+  if (prs.length) {
+    h += "<h2>Лучшие результаты</h2>" + prs.map(({ c, pr }) =>
+      `<button class="pick" data-act="pr-open" data-name="${esc(c.name)}"><span class="g"><span style="display:block;font-weight:600">${esc(c.name)}</span>` +
+      `<span class="sub" style="display:block">${pr.weight ? fmtNum(pr.weight) + " кг × " + pr.reps : pr.reps + " повт."} · ${fmtDay(pr.day)} · 1ПМ ${fmtNum(pr.e1rm)}</span></span>${icon("right")}</button>`).join("");
+  }
+  return h;
 }
 function chartPoints() {
   const d = S.sum.data;
@@ -862,8 +940,20 @@ function chartPoints() {
   if (S.sum.metric === "weight") return d.bodyweight.points.map(p => ({ x: fmtDay(p.day), y: p.weight }));
   return d.exercise ? d.exercise.days.map(p => ({ x: fmtDay(p.day), y: p[S.sum.metric] })) : [];
 }
-function drawProgressChart() { const cv = $("#chart"); if (cv) drawChart(cv, chartPoints()); }
-function drawChart(cv, pts) {
+function updateReadout(pts) {
+  const el = $("#readout");
+  if (!el) return;
+  el.textContent = pts.length && S.sel != null ? `${pts[S.sel].x} · ${fmtNum(pts[S.sel].y)} кг` : "";
+}
+function drawProgressChart() {
+  const cv = $("#chart");
+  if (!cv) return;
+  const pts = chartPoints();
+  if (S.sel == null || S.sel >= pts.length) S.sel = pts.length ? pts.length - 1 : null;
+  drawChart(cv, pts, S.sel);
+  updateReadout(pts);
+}
+function drawChart(cv, pts, sel) {
   const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
   if (!w) return;
   cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
@@ -897,6 +987,19 @@ function drawChart(cv, pts) {
   c.stroke();
   c.fillStyle = accent;
   pts.forEach((p, i) => { c.beginPath(); c.arc(X(i), Y(p.y), 3.5, 0, Math.PI * 2); c.fill(); });
+  cv._hit = clientX => {
+    const x = clientX - cv.getBoundingClientRect().left;
+    let best = 0, bd = Infinity;
+    pts.forEach((p, i) => { const dd = Math.abs(X(i) - x); if (dd < bd) { bd = dd; best = i; } });
+    return best;
+  };
+  if (sel != null && pts[sel]) {
+    const bg = cs.getPropertyValue("--bg").trim() || "#fff";
+    c.save(); c.globalAlpha = 0.5; c.strokeStyle = hint; c.setLineDash([4, 4]); c.lineWidth = 1;
+    c.beginPath(); c.moveTo(X(sel), T); c.lineTo(X(sel), h - B); c.stroke(); c.restore();
+    c.fillStyle = bg; c.beginPath(); c.arc(X(sel), Y(pts[sel].y), 7, 0, Math.PI * 2); c.fill();
+    c.fillStyle = accent; c.beginPath(); c.arc(X(sel), Y(pts[sel].y), 5, 0, Math.PI * 2); c.fill();
+  }
   c.fillStyle = hint; c.textBaseline = "alphabetic";
   c.textAlign = "left"; c.fillText(pts[0].x, L, h - 6);
   if (pts.length > 1) { c.textAlign = "right"; c.fillText(pts[pts.length - 1].x, w - R, h - 6); }
@@ -910,15 +1013,27 @@ async function calc() {
   const q = new URLSearchParams();
   if (m.exercise) q.set("exercise", m.exercise);
   if (days) { const d = new Date(); d.setDate(d.getDate() - days + 1); q.set("since", ymd(d)); }
-  try { m.data = await api("/summary?" + q.toString()); m.reqPeriod = m.period; }
+  S.sel = null;
+  try { m.data = await api("/summary?" + q.toString()); }
   catch (e) { await note(e.message); }
   render();
 }
+let dragging = false;
+function chartPick(e) {
+  const cv = e.target;
+  if (!cv || cv.id !== "chart" || !cv._hit) return;
+  S.sel = cv._hit(e.clientX);
+  drawProgressChart();
+}
+app.addEventListener("pointerdown", e => { dragging = true; chartPick(e); });
+app.addEventListener("pointermove", e => { if (dragging) chartPick(e); });
+document.addEventListener("pointerup", () => { dragging = false; });
+document.addEventListener("pointercancel", () => { dragging = false; });
 
 /* ---------- отрисовка ---------- */
 function render() {
   if (S.view === "session" && !S.session) S.view = "list";
-  const key = [S.tab, S.view, S.sheet || "", S.zoom ? "z" : "", S.themeSheet ? "t" : ""].join(":");
+  const key = [S.tab, S.view, S.sheet || "", S.zoom ? "z" : "", S.themeSheet ? "t" : "", S.hedit || ""].join(":");
   const y = key === S.lastKey ? window.scrollY : 0;
   S.lastKey = key;
   let h;
@@ -935,6 +1050,7 @@ function render() {
   if (S.tab === "progress") drawProgressChart();
 }
 function goBack() {
+  if (S.hedit && !S.zoom) { S.hedit = null; loadHistory().then(render); return; }
   if (S.zoom) S.zoom = null;
   else if (S.sheet) S.sheet = null;
   else if (S.view === "pick") S.view = S.pickFor === "session" ? "session" : "edit";
@@ -942,13 +1058,17 @@ function goBack() {
   render();
 }
 async function showTab(t) {
-  S.tab = t; S.sheet = null; S.zoom = null; S.themeSheet = false;
+  S.tab = t; S.sheet = null; S.zoom = null; S.themeSheet = false; S.hedit = null;
   try {
     if (t === "history") await loadHistory();
     if (t === "progress") {
       await loadCatalog();
       const names = S.catalog.filter(c => c.prev).map(c => c.name);
-      if (!names.includes(S.sum.exercise)) { S.sum.exercise = names[0] || ""; S.sum.data = null; }
+      if (!names.includes(S.sum.exercise)) {
+        const cnt = n => new Set(D.sessions.filter(x => x.sets.some(y => y.exercise === n)).map(x => x.day)).size;
+        S.sum.exercise = names.slice().sort((x, y) => cnt(y) - cnt(x))[0] || "";
+      }
+      S.sum.data = null; render(); await calc();
     }
     if (t === "diary") await Promise.all([loadWorkouts(), loadSession()]);
   } catch (e) { await note(e.message); }
@@ -1055,16 +1175,51 @@ const actions = {
       else showTab("history");
     } catch (e) { note(e.message); }
   },
-  period: b => { S.sum.period = b.dataset.p; render(); },
-  metric: b => { S.sum.metric = b.dataset.m; render(); },
-  calc: () => calc(),
+  period: async b => { S.sum.period = b.dataset.p; await calc(); },
+  metric: b => { S.sum.metric = b.dataset.m; S.sel = null; render(); },
+  "pr-open": async b => { S.sum.exercise = b.dataset.name; S.sum.metric = "top_weight"; await calc(); window.scrollTo(0, 0); },
   "save-bw": async () => {
-    const weight = parseNum($("#bw").value);
+    const weight = parseNum($("#bw").value), day = $("#bwd").value;
     if (!(weight > 20 && weight < 500)) return note("Проверь вес");
-    try {
-      await api("/bodyweight", "POST", { weight, day: today() });
-      if (S.sum.data) await calc(); else { $("#bw").value = ""; note("Вес сохранён"); }
-    } catch (e) { note(e.message); }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || day > today()) return note("Проверь дату");
+    try { await api("/bodyweight", "POST", { weight, day }); await calc(); }
+    catch (e) { note(e.message); }
+  },
+  "del-bw": async b => {
+    if (!(await ask("Удалить запись веса?"))) return;
+    try { await api("/bodyweight/" + b.dataset.day, "DELETE"); await calc(); } catch (e) { note(e.message); }
+  },
+  "h-edit": async b => { S.hedit = b.dataset.id; try { await loadCatalog(); } catch (e) {} render(); },
+  "hadd-set": b => {
+    const s = histSession(); if (!s) return;
+    const own = s.sets.filter(x => x.exercise === b.dataset.name), last = own[own.length - 1];
+    s.sets.push({ id: uid8(), exercise: b.dataset.name, weight: last ? last.weight : 0, reps: last ? last.reps : 10 });
+    saveSession(s); render();
+  },
+  "hdel-set": async b => {
+    const s = histSession(); if (!s) return;
+    if (!(await ask("Удалить подход?"))) return;
+    s.sets = s.sets.filter(x => x.id !== b.dataset.id); saveSession(s); render();
+  },
+  "hdel-ex": async b => {
+    const s = histSession(); if (!s) return;
+    if (!(await ask("Убрать упражнение «" + b.dataset.name + "» из этой тренировки?"))) return;
+    s.exercises = s.exercises.filter(e => e.name !== b.dataset.name); s.sets = s.sets.filter(x => x.exercise !== b.dataset.name);
+    saveSession(s); render();
+  },
+  "hadd-ex": () => {
+    const s = histSession(); if (!s) return;
+    const name = normName($("#hnew").value).slice(0, 60);
+    if (!name) return note("Укажи упражнение");
+    if (!s.exercises.some(e => e.name === name)) s.exercises.push({ name, photo: photoFor(name) });
+    if (!s.sets.some(x => x.exercise === name)) s.sets.push({ id: uid8(), exercise: name, weight: 0, reps: 10 });
+    saveSession(s); render();
+  },
+  hdel: async () => {
+    const s = histSession(); if (!s) return;
+    if (!(await ask("Удалить эту тренировку из истории?"))) return;
+    D.sessions = D.sessions.filter(x => x.id !== s.id); dropSession(s.id);
+    S.hedit = null; await loadHistory(); render();
   },
 };
 document.addEventListener("click", e => {
@@ -1080,7 +1235,10 @@ document.addEventListener("input", e => {
     if (ex) { const v = parseNum(t.value); S.inputs[ex.name][t.dataset.in] = isNaN(v) ? 0 : v; }
   }
 });
-document.addEventListener("change", e => { if (e.target.id === "pex") { S.sum.exercise = e.target.value; calc(); } });
+document.addEventListener("change", e => {
+  if (e.target.id === "pex") { S.sum.exercise = e.target.value; calc(); }
+  else if (S.tab === "history" && S.hedit) hChange(e.target);
+});
 
 /* ---------- Telegram ---------- */
 try {
