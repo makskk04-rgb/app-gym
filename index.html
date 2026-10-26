@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Дневник тренировок</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   /* Макет: одна колонка до 560px, фиксированная нижняя панель с тремя вкладками.
      Палитра: холодный серо-голубой нейтральный фон и один синий акцент; золотой только для рекордов. */
@@ -23,6 +26,13 @@
     --badge-fg: #7a4a00;
     --scrim: rgba(0, 0, 0, .45);
     --font: -apple-system, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --disp: var(--font); --disp-w: 700; --disp-tf: none; --disp-ls: 0;
+    --r-card: 14px; --r-btn: 12px; --r-day: 12px;
+    --btn: var(--accent); --btn-fg: var(--on-accent); --btn-clip: none;
+    --day-bg: var(--accent); --day-fg: var(--on-accent); --dot: var(--accent);
+    --chk: var(--accent); --chk-fg: var(--on-accent); --chk-r: 50%;
+    --excard: var(--card); --tile: var(--card); --input: var(--bg);
+    --hero-bg: transparent; --hero-pad: 0px; --hero-fg: var(--fg);
   }
   :root[data-theme="dark"] {
     --bg: #101216; --fg: #eceff4; --muted: #a2a9b5; --card: #1a1d24; --chip: #2a2e38;
@@ -41,6 +51,39 @@
     --line: rgba(159, 176, 204, .28); --accent: #2563c9; --on-accent: #ffffff; --link: #8fc1ff;
     --danger: #ff7b72; --badge-bg: #4a3a0e; --badge-fg: #ffd88a; --scrim: rgba(0, 0, 0, .6);
     color-scheme: dark;
+  }
+  :root[data-theme="contrast"] {
+    --bg: #f3f3f1; --fg: #111111; --muted: #84847f; --card: #ffffff; --chip: #e6e6e3; --line: rgba(17,17,17,.14);
+    --accent: #d92b2b; --on-accent: #ffffff; --link: #b81f1f; --danger: #b81f1f;
+    --font: "Manrope", -apple-system, system-ui, sans-serif; --disp: "Barlow Condensed", "Arial Narrow", sans-serif; --disp-w: 800; --disp-tf: uppercase; --disp-ls: .01em;
+    --r-card: 22px; --r-btn: 16px; --r-day: 14px;
+    --btn: #111111; --btn-fg: #ffffff; --day-bg: #111111; --day-fg: #ffffff; --chk: #111111; --chk-fg: #ffffff;
+    --tile: transparent; --input: #ffffff;
+  }
+  :root[data-theme="night"] {
+    --bg: #09090a; --fg: #ffffff; --muted: #8d8d93; --card: #17171a; --chip: #26262b; --line: rgba(255,255,255,.12);
+    --accent: #e03a3a; --on-accent: #ffffff; --link: #ff7a7a; --danger: #ff8a8a; --scrim: rgba(0,0,0,.65);
+    --badge-bg: #4a3a0e; --badge-fg: #ffd88a; color-scheme: dark;
+    --font: "Manrope", -apple-system, system-ui, sans-serif; --disp: "Barlow Condensed", "Arial Narrow", sans-serif; --disp-w: 800; --disp-tf: uppercase; --disp-ls: .01em;
+    --r-card: 20px; --r-btn: 16px; --r-day: 14px;
+    --btn: #e03a3a; --day-bg: #e03a3a; --chk: #e03a3a; --chk-fg: #ffffff; --tile: #17171a; --input: #09090a;
+  }
+  :root[data-theme="brutal"] {
+    --bg: #1a0a0b; --fg: #f6ecec; --muted: #a48a8b; --card: #2a1214; --chip: #3a1b1e; --line: rgba(246,236,236,.14);
+    --accent: #d02a2f; --on-accent: #ffffff; --link: #ff8a8a; --danger: #ff9a9a; --scrim: rgba(0,0,0,.65);
+    --badge-bg: #4a3a0e; --badge-fg: #ffd88a; color-scheme: dark;
+    --font: "Manrope", -apple-system, system-ui, sans-serif; --disp: "Barlow Condensed", "Arial Narrow", sans-serif; --disp-w: 800; --disp-tf: uppercase; --disp-ls: .02em;
+    --r-card: 2px; --r-btn: 2px; --r-day: 2px;
+    --btn: #d02a2f; --btn-clip: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%);
+    --day-bg: #d02a2f; --chk: #d02a2f; --chk-r: 2px; --excard: #241012; --tile: #241012; --input: #1a0a0b;
+    --hero-bg: repeating-linear-gradient(135deg, #c42227 0 14px, #b81e23 14px 28px); --hero-pad: 14px; --hero-fg: #ffffff;
+  }
+  :root[data-theme="rose"] {
+    --bg: #fbeff0; --fg: #2b1519; --muted: #8e6d73; --card: #fff7f7; --chip: #f3dcdf; --line: rgba(43,21,25,.12);
+    --accent: #b5324f; --on-accent: #ffffff; --link: #a02a45; --danger: #a02a45;
+    --font: "Manrope", -apple-system, system-ui, sans-serif; --disp: "Manrope", -apple-system, system-ui, sans-serif; --disp-w: 700; --disp-tf: none;
+    --r-card: 22px; --r-btn: 999px; --r-day: 999px;
+    --btn: #b5324f; --day-bg: #b5324f; --chk: #b5324f; --excard: #fff7f7; --tile: #f6dcdf; --input: #ffffff;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
@@ -175,6 +218,51 @@
   .hs input { width: auto; flex: 1; min-width: 0; height: 44px; padding: 0 4px; text-align: center; background: var(--bg); }
   .hs .u { color: var(--muted); }
   .readout { min-height: 24px; margin: 8px 2px 2px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* ---- экран тренировки в новом стиле ---- */
+  .kick { display: flex; align-items: center; gap: 4px; margin: -4px 0 6px -8px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .kick .back { width: 40px; height: 40px; }
+  .hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; background: var(--hero-bg); padding: var(--hero-pad); color: var(--hero-fg); margin-bottom: 14px; }
+  .hero-t { font-family: var(--disp); font-weight: var(--disp-w); text-transform: var(--disp-tf); letter-spacing: var(--disp-ls); font-size: 38px; line-height: .98; overflow-wrap: anywhere; text-wrap: balance; }
+  .sq { flex: none; width: 44px; height: 44px; border: 0; border-radius: 12px; background: var(--card); color: var(--fg); display: flex; align-items: center; justify-content: center; }
+  .hero .sq { background: var(--card); }
+  .week { display: flex; gap: 6px; margin-bottom: 14px; }
+  .wd { flex: 1; min-width: 0; padding: 8px 0 6px; border-radius: var(--r-day); background: var(--card); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .wd span { font-size: 10px; font-weight: 700; letter-spacing: .04em; color: var(--muted); }
+  .wd b { font-family: var(--disp); font-weight: var(--disp-w); font-size: 20px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .wd i { width: 5px; height: 5px; border-radius: 50%; background: transparent; }
+  .wd i.dot { background: var(--dot); }
+  .wd.on { background: var(--day-bg); color: var(--day-fg); }
+  .wd.on span { color: inherit; opacity: .8; }
+  .wd.on i.dot { background: var(--day-fg); }
+  .tiles { display: flex; gap: 8px; margin-bottom: 14px; }
+  .tile { flex: 1; min-width: 0; padding: 10px 12px; border-radius: var(--r-card); background: var(--tile); }
+  .tile small.l { display: block; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .tile .v { font-family: var(--disp); font-weight: var(--disp-w); font-size: 28px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .tile .v small { font-family: var(--font); font-size: 12px; font-weight: 600; color: var(--muted); margin-left: 3px; }
+  .excard { padding: 14px; margin-bottom: 10px; border-radius: var(--r-card); background: var(--excard); }
+  .ex-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .ex-name { font-family: var(--disp); font-weight: var(--disp-w); text-transform: var(--disp-tf); letter-spacing: var(--disp-ls); font-size: 26px; line-height: 1.05; overflow-wrap: anywhere; }
+  .ex-prev { flex: none; text-align: right; font-size: 11px; color: var(--muted); }
+  .ex-prev b { display: block; font-size: 14px; color: var(--fg); font-variant-numeric: tabular-nums; }
+  .dashes { display: flex; gap: 4px; margin: 8px 0 10px; }
+  .dashes i { flex: 1; max-width: 28px; height: 4px; border-radius: 2px; background: var(--chip); }
+  .dashes i.f { background: var(--chk); }
+  .dashes i.c { background: var(--accent); }
+  .tr { display: grid; grid-template-columns: 24px 1fr 1fr 44px; align-items: center; gap: 8px; min-height: 52px; border-top: 1px solid var(--line); }
+  .tr.th { min-height: 28px; border-top: 0; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .tr .n { color: var(--muted); font-size: 13px; }
+  .tr b { font-family: var(--disp); font-weight: var(--disp-w); font-size: 24px; font-variant-numeric: tabular-nums; }
+  .tr input { height: 44px; padding: 0 8px; text-align: left; font-family: var(--disp); font-weight: var(--disp-w); font-size: 22px; background: var(--input); border: 1.5px solid var(--accent); border-radius: calc(var(--r-btn) * .6); min-width: 0; }
+  .chk { width: 40px; height: 40px; padding: 0; border-radius: var(--chk-r); border: 2px solid var(--chk); background: transparent; color: var(--chk); display: flex; align-items: center; justify-content: center; }
+  .chk.on { background: var(--chk); color: var(--chk-fg); }
+  .nextex { width: 100%; margin-bottom: 8px; padding: 12px 14px; border: 0; border-radius: var(--r-card); text-align: left; background: var(--card); color: var(--fg); display: flex; align-items: center; gap: 10px; }
+  .nextex .g { flex: 1; min-width: 0; }
+  .nextex .nm { display: block; font-weight: 700; overflow-wrap: anywhere; }
+  .nextex > svg { color: var(--muted); }
+  .finish { width: 100%; min-height: 58px; margin-top: 12px; border: 0; border-radius: var(--r-btn); background: var(--btn); color: var(--btn-fg); clip-path: var(--btn-clip);
+            font-family: var(--disp); font-weight: var(--disp-w); text-transform: var(--disp-tf); letter-spacing: .06em; font-size: 18px; }
+  .h1 { font-family: var(--disp); text-transform: var(--disp-tf); }
   .dlg { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--scrim); }
   .dlg[hidden] { display: none; }
   .dlg-box { width: 100%; max-width: 340px; padding: 18px; border-radius: 16px; background: var(--bg); color: var(--fg); }
@@ -612,6 +700,7 @@ setInterval(() => {
   if (!S.session) return;
   const t = fmtDur(elapsed());
   document.querySelectorAll("[data-timer]").forEach(e => { e.textContent = t; });
+  document.querySelectorAll("[data-time]").forEach(e => { e.innerHTML = timeHtml(); });
 }, 1000);
 
 /* ---------- фото: уменьшаем и кладём в файловое хранилище страницы ---------- */
@@ -665,7 +754,7 @@ const memWarn = () => (P.mode === "memory" ? '<div class="warn">Данные н�
 
 /* ---------- Дневник: список ---------- */
 function viewList() {
-  let h = memWarn();
+  let h = memWarn() + `<div class="kick" style="margin-left:0">${kickDate()}</div>` + weekStrip();
   if (S.session) {
     h += `<button class="banner" data-act="resume">${icon("clock", 22)}<span class="grow"><b>Идёт тренировка</b><span>${esc(S.session.name)}</span></span>` +
       `<span class="tm" data-timer>${fmtDur(elapsed())}</span></button>`;
@@ -757,11 +846,33 @@ function inputsFor(e) {
   }
   return S.inputs[e.name];
 }
-function stepper(id, label, key, step, value) {
-  return `<div class="stepper"><label class="field-l" for="${id}">${label}</label><div class="ctl">` +
-    `<button class="sbtn" data-act="step" data-t="${key}" data-d="-${step}" aria-label="Уменьшить: ${label}">−</button>` +
-    `<input id="${id}" data-in="${key}" type="text" inputmode="decimal" value="${fmtNum(value)}" autocomplete="off">` +
-    `<button class="sbtn" data-act="step" data-t="${key}" data-d="${step}" aria-label="Увеличить: ${label}">+</button></div></div>`;
+const WD = ["ВС", "ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"];
+const MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
+function weekStrip() {
+  const have = new Set(D.sessions.map(x => x.day));
+  let h = '<div class="week" role="list" aria-label="Последние 7 дней">';
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    h += `<div class="wd ${i === 0 ? "on" : ""}" role="listitem" aria-label="${d.getDate()} ${MONTHS[d.getMonth()]}${have.has(ymd(d)) ? ", была тренировка" : ""}"><span>${WD[d.getDay()]}</span><b>${d.getDate()}</b><i class="${have.has(ymd(d)) ? "dot" : ""}"></i></div>`;
+  }
+  return h + "</div>";
+}
+const kickDate = () => { const d = new Date(); return `${WD[d.getDay()]} · ${d.getDate()} ${MONTHS[d.getMonth()]}`; };
+function timeParts(sec) {
+  const m = Math.floor(sec / 60);
+  return m >= 60 ? [`${Math.floor(m / 60)}:${pad2(m % 60)}`, "ч"] : [String(m), "мин"];
+}
+const timeHtml = () => { const [n, u] = timeParts(elapsed()); return `${n}<small>${u}</small>`; };
+const topSet = ss => ss.reduce((a, x) => (!a || x.weight > a.weight || (x.weight === a.weight && x.reps > a.reps) ? x : a), null);
+function prevTop(prev) {
+  if (!prev || !prev.sets.length) return "—";
+  const t = topSet(prev.sets);
+  return t.weight ? `${fmtNum(t.weight)} × ${t.reps}` : `${t.reps} повт.`;
+}
+function prevPlan(prev) {
+  if (!prev || !prev.sets.length) return "Раньше не выполнялось";
+  const t = prev.sets[prev.sets.length - 1];
+  return `${prev.sets.length} × ${t.reps}` + (t.weight ? ` · ${fmtNum(t.weight)} кг` : "");
 }
 function viewSession() {
   const s = S.session;
@@ -770,24 +881,36 @@ function viewSession() {
     S.openEx = i >= 0 ? i : 0;
   }
   const total = s.exercises.reduce((n, e) => n + e.sets.length, 0);
-  const timer = `<div class="timer" role="timer" aria-label="Время тренировки">${icon("clock", 18)}<span data-timer>${fmtDur(elapsed())}</span></div>`;
-  let h = memWarn() + header(s.name, `${fmtDay(s.day)} · ${total} ${plural(total, SETS)}`, timer);
+  const vol = s.exercises.reduce((n, e) => n + e.sets.reduce((a, x) => a + x.weight * x.reps, 0), 0);
+  let h = memWarn() + `<div class="kick"><button class="back" data-act="back" aria-label="К списку тренировок">${icon("back", 22)}</button>${kickDate()}</div>`;
+  h += `<div class="hero"><div class="hero-t">${esc(s.name)}</div><button class="sq" data-act="add-ex" aria-label="Добавить упражнение">${icon("plus", 22)}</button></div>`;
+  h += weekStrip();
+  h += `<div class="tiles"><div class="tile"><small class="l">Объём</small><div class="v">${Math.round(vol).toLocaleString("ru-RU")}<small>кг</small></div></div>` +
+    `<div class="tile"><small class="l">Время</small><div class="v" data-time role="timer" aria-label="Время тренировки">${timeHtml()}</div></div>` +
+    `<div class="tile"><small class="l">Подходов</small><div class="v">${total}</div></div></div>`;
   h += s.exercises.map((e, i) => {
     if (i !== S.openEx) {
-      return `<button class="exclosed" data-act="open-ex" data-i="${i}">${flatThumb(e.photo, 56)}<span style="flex:1;min-width:0"><span style="display:block;font-weight:700">${esc(e.name)}</span>` +
-        `<span class="sub" style="display:block">${e.sets.length ? e.sets.length + " " + plural(e.sets.length, SETS) + " · " + e.sets.map(x => (x.weight ? fmtNum(x.weight) + "×" + x.reps : x.reps)).join(", ") : esc(prevText(e.prev))}</span></span>${icon("down")}</button>`;
+      const sub = e.sets.length
+        ? `${e.sets.length} ${plural(e.sets.length, SETS)} · ` + e.sets.map(x => (x.weight ? fmtNum(x.weight) + "×" + x.reps : x.reps)).join(", ")
+        : prevPlan(e.prev);
+      return `<button class="nextex" data-act="open-ex" data-i="${i}">${e.photo ? flatThumb(e.photo, 40) : ""}<span class="g"><span class="nm">${esc(e.name)}</span><span class="sub">${esc(sub)}</span></span>${icon("right")}</button>`;
     }
     const inp = inputsFor(e);
-    return `<div class="card"><div style="display:flex;align-items:center;gap:12px">${thumb(e.photo)}<div class="b">${esc(e.name)}</div></div>` +
-      `<div class="prev">${esc(prevText(e.prev))}</div>` +
-      `<div style="margin-top:6px">` + e.sets.map((x, k) =>
-        `<div class="setrow"><span class="n">${k + 1}</span><span class="v">${esc(setText(x))}</span>` +
-        `<button class="ico" data-act="del-set" data-id="${esc(x.id)}" aria-label="Удалить подход ${k + 1}">${icon("x", 16)}</button></div>`).join("") + `</div>` +
-      `<div class="row">${stepper("iw", "Вес, кг", "w", 2.5, inp.w)}${stepper("ir", "Повторы", "r", 1, inp.r)}</div>` +
-      `<button class="btn primary" data-act="add-set">Записать подход</button></div>`;
+    const plan = Math.max(e.prev ? e.prev.sets.length : 3, e.sets.length + 1);
+    let dash = "";
+    for (let k = 0; k < plan; k++) dash += `<i class="${k < e.sets.length ? "f" : k === e.sets.length ? "c" : ""}"></i>`;
+    return `<div class="excard"><div class="ex-top"><div style="display:flex;gap:10px;align-items:flex-start;min-width:0">${e.photo ? thumb(e.photo, 44) : ""}<div class="ex-name">${esc(e.name)}</div></div>` +
+      `<div class="ex-prev">Прошлый раз<b>${esc(prevTop(e.prev))}</b></div></div>` +
+      `<div class="dashes" aria-hidden="true">${dash}</div>` +
+      `<div class="tr th"><span>№</span><span>Вес, кг</span><span>Повт.</span><span></span></div>` +
+      e.sets.map((x, k) => `<div class="tr"><span class="n">${k + 1}</span><b>${fmtNum(x.weight)}</b><b>${x.reps}</b>` +
+        `<button class="chk on" data-act="del-set" data-id="${esc(x.id)}" aria-label="Подход ${k + 1} записан. Нажми, чтобы удалить">${icon("check", 18)}</button></div>`).join("") +
+      `<div class="tr"><span class="n">${e.sets.length + 1}</span>` +
+      `<input id="iw" data-in="w" type="text" inputmode="decimal" value="${fmtNum(inp.w)}" autocomplete="off" aria-label="Вес, кг" onfocus="this.select()">` +
+      `<input id="ir" data-in="r" type="text" inputmode="numeric" value="${fmtNum(inp.r)}" autocomplete="off" aria-label="Повторы" onfocus="this.select()">` +
+      `<button class="chk" data-act="add-set" aria-label="Записать подход">${icon("check", 18)}</button></div></div>`;
   }).join("");
-  h += `<button class="btn soft" data-act="add-ex">${icon("plus")} Добавить упражнение</button>`;
-  h += `<button class="btn plain" data-act="finish">${icon("check")} Завершить тренировку</button>`;
+  h += `<button class="finish" data-act="finish">Завершить тренировку</button>`;
   return h;
 }
 
@@ -868,7 +991,7 @@ async function hChange(t) {
 }
 
 /* ---------- Настройки ---------- */
-const THEMES = [["classic", "Классическое", "#ffffff"], ["dark", "Тёмное", "#101216"], ["red", "Красное", "#d32f2f"], ["blue", "Синее", "#2563c9"]];
+const THEMES = [["classic", "Классическое", "#ffffff"], ["dark", "Тёмное", "#101216"], ["red", "Красное", "#d32f2f"], ["blue", "Синее", "#2563c9"], ["contrast", "Контраст", "#111111"], ["night", "Ночь", "#e03a3a"], ["brutal", "Брутал", "#a81d22"], ["rose", "Роза", "#b5324f"]];
 let theme = "classic";
 try { const t = localStorage.getItem("gym-theme"); if (THEMES.some(x => x[0] === t)) theme = t; } catch (e) {}
 function applyTheme() {
