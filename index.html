@@ -331,6 +331,20 @@
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .chipv { padding: 4px 10px; border-radius: 999px; background: var(--chip); font-size: 13px; font-variant-numeric: tabular-nums; }
   .chipv i { font-style: normal; font-weight: 700; }
+  .bhrange { display: flex; align-items: center; gap: 8px; margin: 12px 0; padding: 10px 12px; border-radius: var(--r-card); background: var(--card); }
+  .bhrange b { flex: 1; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .bhrange > span:first-child { color: var(--accent); display: flex; }
+  .avgs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .avgs b { display: block; font-family: var(--disp); font-weight: var(--disp-w); font-size: 20px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .avgs b small, .hc b small { font-family: var(--font); font-size: 11px; font-weight: 500; color: var(--muted); }
+  .avgs span { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .avgs i { display: block; font-style: normal; font-size: 12px; font-weight: 700; color: var(--muted); min-height: 16px; }
+  .avgs i.up { color: #1e8e3e; } .avgs i.down { color: var(--danger); }
+  .hrow { width: 100%; margin-bottom: 6px; padding: 10px 8px 10px 12px; border: 0; border-radius: var(--r-card); background: var(--card); color: var(--fg); text-align: left;
+          display: grid; grid-template-columns: 52px repeat(4, 1fr) 16px; gap: 4px; align-items: center; }
+  .hd b { display: block; font-size: 14px; } .hd small { font-size: 11px; color: var(--muted); }
+  .hc b { display: block; font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; } .hc > small { font-size: 11px; color: var(--muted); }
+  .hx2 { color: var(--muted); display: flex; }
   .dlg { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--scrim); }
   .dlg[hidden] { display: none; }
   .dlg-box { width: 100%; max-width: 340px; padding: 18px; border-radius: 16px; background: var(--bg); color: var(--fg); }
@@ -1285,7 +1299,7 @@ document.addEventListener("pointercancel", () => { dragging = false; });
 /* ---------- отрисовка ---------- */
 function render() {
   if (S.view === "session" && !S.session) S.view = "list";
-  const key = [S.tab, S.view, S.sheet || "", S.zoom ? "z" : "", S.themeSheet ? "t" : "", S.hedit || "", S.wmenu || "", S.dayKey || "", S.gsheet ? "g" : "", S.wedit || "", S.bedit || "", S.kv, S.kvp ? (S.kvp.sel ? "s" : S.kvp.scan ? "c" : S.kvp.manual ? "m" : "p") : ""].join(":");
+  const key = [S.tab, S.view, S.sheet || "", S.zoom ? "z" : "", S.themeSheet ? "t" : "", S.hedit || "", S.wmenu || "", S.dayKey || "", S.gsheet ? "g" : "", S.gdone || "", S.bhf || "", S.wedit || "", S.bedit || "", S.kv, S.kvp ? (S.kvp.sel ? "s" : S.kvp.scan ? "c" : S.kvp.manual ? "m" : "p") : ""].join(":");
   const y = key === S.lastKey ? window.scrollY : 0;
   S.lastKey = key;
   let h;
@@ -1305,7 +1319,7 @@ function render() {
   if (S.tab === "progress") drawProgressChart();
 }
 function goBack() {
-  if (S.tab === "kbzhu") { if (S.kvp) { kvClose(); return; } if (S.gsheet) { S.gsheet = null; render(); return; } if (S.wedit) { S.wedit = null; render(); return; } if (S.kv !== "home") { S.kv = "home"; S.bedit = null; render(); } return; }
+  if (S.tab === "kbzhu") { if (S.kvp) { kvClose(); return; } if (S.gsheet) { S.gsheet = null; render(); return; } if (S.wedit) { S.wedit = null; render(); return; } if (S.gdone) { S.gdone = null; render(); return; } if (S.kv === "biohist") { S.kv = "bio"; render(); return; } if (S.kv !== "home") { S.kv = "home"; S.bedit = null; render(); } return; }
   if (S.hedit && !S.zoom) {
     S.hedit = null;
     if (S.hfrom) { S.hfrom = null; S.tab = "diary"; S.view = "day"; }
@@ -1787,6 +1801,7 @@ function viewKbzhu() {
   else if (S.kv === "log") h = kvBack("Дневник питания") + viewLog();
   else if (S.kv === "tips") h = kvBack("Советы") + viewTips();
   else if (S.kv === "bio") h = kvBack("Биометрические данные") + viewBio();
+  else if (S.kv === "biohist") h = kvBack("История замеров") + viewBioHist();
   else {
     const b = (to, ic, t, x) => `<button class="wcard" style="min-height:76px" data-act="kv-go" data-to="${to}">${icon(ic, 26)}<span style="flex:1;min-width:0"><span class="t" style="display:block">${t}</span><span class="x" style="display:block">${x}</span></span>${icon("right")}</button>`;
     h = '<div class="sec" style="margin-top:6px"><h2>КБЖУ</h2></div>' +
@@ -1795,7 +1810,7 @@ function viewKbzhu() {
       b("tips", "trend", "Советы", "Вес, недельная сводка и рекомендации") +
       b("bio", "body", "Биометрические данные", "Рост, вес, замеры, цель и её прогресс");
   }
-  return h + (S.kvp ? viewPicker() : "") + (S.gsheet ? viewGoalSheet() : "") + (S.wedit ? viewWEdit() : "");
+  return h + (S.kvp ? viewPicker() : "") + (S.gsheet ? viewGoalSheet() : "") + (S.wedit ? viewWEdit() : "") + (S.gdone ? viewGDone() : "");
 }
 
 /* калькулятор: сырое → готовое */
@@ -1981,6 +1996,19 @@ function bioAdvice(r) {
   } else if (es.length || D.bodyweight.length) {
     out.push(["Поставь цель в «Биометрических данных» (набор, сушка или поддержание на выбранный срок), и советы будут учитывать её и твой прогресс.", "w"]);
   }
+  const dn = (B().done || []).slice().sort((x, y) => (x.endDay < y.endDay ? 1 : -1)), ld = dn[0];
+  if (ld) {
+    const ago = daysBetween(ld.endDay, today()), wk = Math.max(1, daysBetween(ld.startDay, ld.endDay) / 7);
+    const dw0 = ld.base && ld.base.weight != null && ld.end && ld.end.weight != null ? ld.end.weight - ld.base.weight : null;
+    if (!g && ago <= 120) {
+      const nxt = ld.type === "gain" ? "После набора обычно разумно перейти на поддержание на 2–4 недели или на небольшую сушку, чтобы закрепить результат и убрать лишний жир." : ld.type === "cut" ? "После сушки лучше 2–4 недели на поддержании: верни калории к поддерживающим и не набирай резко." : "Можно ставить новую цель: набор массы или сушку.";
+      out.push([`Прошлая цель «${GOALS[ld.type]}» завершена ${ago === 0 ? "сегодня" : ago + " дн назад"}${dw0 != null ? ` (вес ${fmtC(dw0)} кг)` : ""}. ${nxt}`, ""]);
+    }
+    if (dw0 != null && wk >= 2 && (!g || g.type === ld.type)) {
+      const rate = dw0 / wk;
+      out.push([`В прошлой цели ты менял вес примерно на ${fmtC(rate)} кг в неделю за ${Math.round(wk)} нед. ${g ? "Если он был комфортным, держись похожего темпа." : "Это хороший ориентир для следующей цели."}`, ""]);
+    }
+  }
   const h = latestVal("height"), wst = latestVal("waist");
   if (h && wst && wst / h >= 0.5 && (!g || g.type !== "cut")) out.push([`Талия ${fmtNum(wst)} см при росте ${fmtNum(h)} см (отношение ${fmtNum(r1(wst / h * 100) / 100)}). Выше 0,5: следи, чтобы талия росла медленнее веса, и не уходи в большой профицит калорий.`, "w"]);
   const last = es.slice().sort(byDayDesc)[0];
@@ -2044,43 +2072,102 @@ function viewWEdit() {
 }
 
 /* ---- Биометрические данные ---- */
+const fmtLong = s => { const [y, m, d] = s.split("-").map(Number); return `${d} ${MONTHS[m - 1].slice(0, 3)}`; };
+const goalTitle = g => `${GOALS[g.type]} · ${g.months} мес`;
+function goalRows(a0, a1, type) {
+  return BIO.map(([f, n, u]) => {
+    const a = a0[f], c = a1[f];
+    if (a == null || c == null) return "";
+    const d = c - a;
+    return `<div class="gl"><span>${n}</span><span>${fmtNum(a)} → <b>${fmtNum(c)}</b> ${u}</span><b class="${d === 0 || f === "height" || goodDir(f, type) === 0 ? "" : d * goodDir(f, type) > 0 ? "up" : "down"}">${f === "height" ? "" : fmtDelta(r1(d))}</b></div>`;
+  }).join("");
+}
 function viewBio() {
-  const b = B(), g = b.goal, es = b.entries.slice().sort(byDayDesc);
+  const b = B(), g = b.goal, es = b.entries.slice().sort(byDayDesc), done = (b.done || []).slice().sort((x, y) => (x.endDay < y.endDay ? 1 : -1));
   const ed = S.bedit ? es.find(x => x.id === S.bedit) : null;
   let h = '<div class="sec" style="margin-top:6px"><h2>Цель</h2></div>';
   if (!g) {
     h += `<div class="card"><div class="sub">Цель не задана. Впиши замеры ниже, потом поставь цель: набор массы, сушка или поддержание на выбранный срок.</div></div><button class="btn primary" style="margin-top:0" data-act="g-open">${icon("trend", 18)} Поставить цель</button>`;
   } else {
     const end = goalEnd(g), tot = Math.max(1, daysBetween(g.startDay, end)), el = Math.max(0, Math.min(tot, daysBetween(g.startDay, today()))), left = Math.max(0, tot - el);
+    const a0 = {}, a1 = {};
+    BIO.forEach(([f]) => { a0[f] = goalBase(g, f); a1[f] = latestVal(f); });
+    const reached = g.targetWeight && a1.weight != null && a0.weight != null && (g.type === "gain" ? a1.weight >= g.targetWeight : g.type === "cut" ? a1.weight <= g.targetWeight : false);
+    const rows = goalRows(a0, a1, g.type);
     h += `<div class="card"><div class="b" style="font-size:18px">${GOALS[g.type]} · ${g.months} ${g.months === 1 ? "месяц" : g.months < 5 ? "месяца" : "месяцев"}</div>` +
       `<div class="sub">${fmtDay(g.startDay)} → ${fmtDay(end)}${left > 0 ? ` · осталось ${left} дн` : " · срок вышел"}</div>` +
-      `<div class="mbar" style="margin-top:10px"><i style="width:${(el / tot * 100).toFixed(0)}%"></i></div>`;
-    const rows = BIO.map(([f, n, u]) => {
-      const a = goalBase(g, f), c = latestVal(f);
-      if (a == null || c == null) return "";
-      const d = c - a, tgt = f === "weight" && g.targetWeight ? ` → цель ${fmtNum(g.targetWeight)}` : "";
-      return `<div class="gl"><span>${n}</span><span>${fmtNum(a)} → <b>${fmtNum(c)}</b> ${u}${tgt}</span><b class="${d > 0 ? "up" : d < 0 ? "down" : ""}">${f === "height" ? "" : fmtDelta(r1(d))}</b></div>`;
-    }).join("");
-    h += (rows ? `<div style="margin-top:8px">${rows}</div>` : '<div class="sub" style="margin-top:8px">Добавь замеры, чтобы увидеть прогресс цели.</div>') + "</div>" +
-      `<div class="row" style="margin-top:0"><button class="btn soft" style="margin:0" data-act="g-open">Изменить цель</button><button class="btn danger" style="margin:0" data-act="g-end">Завершить цель</button></div>`;
+      `<div class="mbar" style="margin-top:10px"><i style="width:${(el / tot * 100).toFixed(0)}%"></i></div>` +
+      (rows ? `<div style="margin-top:8px">${rows}</div>` : '<div class="sub" style="margin-top:8px">Добавь замеры, чтобы увидеть прогресс цели.</div>') +
+      (reached || left === 0 ? `<div class="sub" style="margin-top:8px;color:var(--fg)">${reached ? "Целевой вес достигнут." : "Срок цели закончился."} Заверши цель, чтобы она попала в выполненные и учлась в советах.</div>` : "") + "</div>" +
+      `<div class="row" style="margin-top:0"><button class="btn soft" style="margin:0" data-act="g-open">Изменить цель</button><button class="btn ${reached || left === 0 ? "primary" : "danger"}" style="margin:0" data-act="g-end">Завершить цель</button></div>`;
   }
+  if (done.length) {
+    h += '<div class="sec"><h2>Выполненные цели</h2></div>' + done.map(d => {
+      const dw = d.base && d.base.weight != null && d.end && d.end.weight != null ? d.end.weight - d.base.weight : null;
+      return `<button class="wcard" style="min-height:64px" data-act="gd-open" data-id="${esc(d.id)}"><span style="color:var(--accent);display:flex">${icon("check", 24)}</span><span style="flex:1;min-width:0"><span class="t" style="display:block;font-size:16px">${goalTitle(d)}</span><span class="x" style="display:block">${fmtDay(d.startDay)} → ${fmtDay(d.endDay)}${dw != null ? " · вес " + fmtDelta(r1(dw)) + " кг" : ""}</span></span>${icon("right")}</button>`;
+    }).join("");
+  }
+  h += `<button class="wcard" style="min-height:64px;margin-top:14px" data-act="kv-go" data-to="biohist">${icon("history", 24)}<span style="flex:1;min-width:0"><span class="t" style="display:block;font-size:16px">История замеров</span><span class="x" style="display:block">Все записи, средние показатели, фильтр по периоду · ${es.length}</span></span>${icon("right")}</button>`;
   h += `<div class="sec"><h2>${ed ? "Правка замера" : "Новый замер"}</h2></div><div class="card"><label class="field-l" for="bf-day">Дата</label><input id="bf-day" type="date" value="${ed ? esc(ed.day) : today()}" max="${today()}">` +
     '<div class="bgrid">' + BIO.map(([f, n, u]) => {
       const last = latestVal(f);
       return `<div><label class="field-l" for="bf-${f}">${n}, ${u}</label><input id="bf-${f}" inputmode="decimal" value="${ed && ed.vals[f] != null ? fmtNum(ed.vals[f]) : ""}" placeholder="${last != null ? fmtNum(last) : "—"}"></div>`;
     }).join("") + "</div>" +
-    `<button class="btn primary" data-act="bio-save">${ed ? "Сохранить изменения" : "Сохранить замер"}</button>` + (ed ? '<button class="btn plain" data-act="bio-cancel">Отмена</button>' : "") + "</div>";
-  h += '<div class="sec"><h2>История замеров</h2></div>';
-  if (!es.length) h += '<div class="card empty">Замеров пока нет</div>';
-  es.forEach((e, i) => {
-    const prev = es.slice(i + 1);
-    const items = BIO.filter(([f]) => e.vals[f] != null).map(([f, n, u]) => {
-      const pv = prev.find(x => x.vals[f] != null), d = pv ? e.vals[f] - pv.vals[f] : null;
-      return `<span class="chipv">${n} <b>${fmtNum(e.vals[f])}</b> ${u}${d != null && f !== "height" && Math.abs(d) > 0.001 ? ` <i class="${d > 0 ? "up" : "down"}">${fmtDelta(r1(d))}</i>` : ""}</span>`;
-    }).join("");
-    h += `<div class="card"><div style="display:flex;align-items:center;gap:8px"><div class="b" style="flex:1">${fmtDay(e.day)}</div><button class="link" data-act="bio-edit" data-id="${esc(e.id)}">Изменить</button><button class="ico" data-act="bio-del" data-id="${esc(e.id)}" aria-label="Удалить замер от ${fmtDay(e.day)}">${icon("x", 16)}</button></div><div class="chips">${items}</div></div>`;
-  });
+    `<button class="btn primary" data-act="bio-save">${ed ? "Сохранить изменения" : "Сохранить замер"}</button>` +
+    (ed ? '<button class="btn plain" data-act="bio-cancel">Отмена</button><button class="btn danger" data-act="bio-del" data-id="' + esc(ed.id) + '">Удалить замер</button>' : "") + "</div>";
   return h;
+}
+/* история замеров: фильтры, средние, список */
+function bhRange() {
+  const f = S.bhf || "all", off = S.bhoff || 0, t = today();
+  if (f === "all") return { from: null, to: null, label: "Всё время" };
+  let from, to;
+  if (f === "week") { to = addDays(t, -7 * off); from = addDays(to, -6); }
+  else if (f === "month") { const d = new Date(); const a = new Date(d.getFullYear(), d.getMonth() - off, 1), z = new Date(d.getFullYear(), d.getMonth() - off + 1, 0); from = ymd(a); to = ymd(z); }
+  else { const y = new Date().getFullYear() - off; from = `${y}-01-01`; to = `${y}-12-31`; }
+  return { from, to, label: `${fmtLong(from)} — ${fmtLong(to)} ${to.slice(0, 4)}` };
+}
+function goodDir(f, type) {
+  const t = type !== undefined ? type : (B().goal && B().goal.type) || null;
+  if (f === "waist") return -1;
+  if (f === "weight") return t === "gain" ? 1 : t === "cut" ? -1 : 0;
+  if (f === "biceps") return t === "gain" ? 1 : 0;
+  return 0;
+}
+const HCOLS = [["weight", "Вес", "кг"], ["waist", "Талия", "см"], ["hips", "Бёдра", "см"], ["biceps", "Бицепс", "см"]];
+function viewBioHist() {
+  const r = bhRange(), all = B().entries.slice().sort(byDayDesc);
+  const list = all.filter(e => (!r.from || e.day >= r.from) && (!r.to || e.day <= r.to));
+  const chron = list.slice().reverse();
+  const F = [["all", "Все"], ["week", "Неделя"], ["month", "Месяц"], ["year", "Год"]];
+  let h = '<div class="periods" style="margin-top:0" role="group" aria-label="Период">' + F.map(([k, l]) => `<button data-act="bh-f" data-f="${k}" class="${(S.bhf || "all") === k ? "on" : ""}">${l}</button>`).join("") + "</div>";
+  h += `<div class="bhrange"><span>${icon("clock", 18)}</span><b>${r.label}</b>` + ((S.bhf || "all") === "all" ? "" :
+    `<span class="wk-nav"><button data-act="bh-off" data-d="1" aria-label="Раньше">${icon("back", 20)}</button><button data-act="bh-off" data-d="-1" aria-label="Позже" ${(S.bhoff || 0) === 0 ? 'disabled style="opacity:.3"' : ""}>${icon("right", 20)}</button></span>`) + "</div>";
+  h += `<div class="card"><div class="b" style="display:flex;align-items:center;gap:8px;margin-bottom:10px">${icon("trend", 18)} Средние показатели</div><div class="avgs">` + HCOLS.map(([f, n, u]) => {
+    const vs = list.filter(e => e.vals[f] != null).map(e => e.vals[f]), a = avg(vs);
+    const cv = chron.filter(e => e.vals[f] != null).map(e => e.vals[f]), d = cv.length > 1 ? cv[cv.length - 1] - cv[0] : null;
+    const gd = goodDir(f), cls = d == null || Math.abs(d) < 0.05 ? "" : gd === 0 ? "" : (d * gd > 0 ? "up" : "down");
+    return `<div><b>${a == null ? "—" : fmtNum(r1(a))}<small> ${a == null ? "" : u}</small></b><span>${f === "weight" ? "Вес" : f === "waist" ? "Обхват талии" : f === "hips" ? "Обхват бёдер" : "Бицепс"}</span>` +
+      (d != null && Math.abs(d) >= 0.05 ? `<i class="${cls}">${d > 0 ? "↑" : "↓"} ${fmtNum(r1(Math.abs(d)))}</i>` : "<i></i>") + "</div>";
+  }).join("") + "</div></div>";
+  h += '<div class="sec"><h2>Записи</h2></div>';
+  if (!list.length) h += '<div class="card empty">За этот период замеров нет</div>';
+  h += list.map(e => {
+    const tm = e.t ? fmtClock(Math.floor(e.t / 1000)) : "";
+    return `<button class="hrow" data-act="bh-edit" data-id="${esc(e.id)}" aria-label="Открыть замер от ${fmtDay(e.day)}"><span class="hd"><b>${fmtLong(e.day)}</b><small>${tm}</small></span>` +
+      HCOLS.map(([f, n, u]) => `<span class="hc"><b>${e.vals[f] != null ? fmtNum(e.vals[f]) + "<small> " + u + "</small>" : "—"}</b><small>${n}</small></span>`).join("") + `<span class="hx2">${icon("right", 16)}</span></button>`;
+  }).join("");
+  return h;
+}
+function viewGDone() {
+  const d = (B().done || []).find(x => x.id === S.gdone);
+  if (!d) return "";
+  const days = daysBetween(d.startDay, d.endDay), rows = goalRows(d.base || {}, d.end || {}, d.type);
+  return '<div class="scrim" data-act="gd-close"></div><div class="sheet" role="dialog" aria-label="Выполненная цель"><div class="sheet-in"><div class="grab"></div>' +
+    `<div class="sheet-h" style="margin-bottom:8px"><div class="h1">${goalTitle(d)}</div><button class="link" data-act="gd-close">Закрыть</button></div>` +
+    `<div class="sub">${fmtDay(d.startDay)} → ${fmtDay(d.endDay)} · ${days} дн${d.targetWeight ? " · цель " + fmtNum(d.targetWeight) + " кг" : ""}</div>` +
+    (rows ? `<div style="margin-top:8px">${rows}</div>` : '<div class="sub" style="margin-top:8px">Замеров за этот период не было.</div>') +
+    `<button class="btn danger" data-act="gd-del" data-id="${esc(d.id)}">Удалить из истории</button></div></div>`;
 }
 function recMonths(type, target) {
   const w = latestVal("weight");
@@ -2195,7 +2282,18 @@ Object.assign(actions, {
     else bb.goal = { type: s.type, months: s.months, startDay: today(), targetWeight: s.type !== "keep" && t > 0 ? t : null, base: snapshot() };
     N().goal = s.type; persist(); S.gsheet = null; render();
   },
-  "g-end": async () => { if (await ask("Завершить цель? Замеры останутся.")) { B().goal = null; persist(); render(); } },
+  "g-end": async () => {
+    if (!(await ask("Завершить цель? Она попадёт в выполненные, замеры останутся."))) return;
+    const bb = B(), g = bb.goal; if (!g) return;
+    (bb.done || (bb.done = [])).push({ id: uid8(), type: g.type, months: g.months, startDay: g.startDay, endDay: today(), targetWeight: g.targetWeight || null, base: { ...(g.base || {}), ...Object.fromEntries(BIO.map(([f]) => [f, goalBase(g, f)]).filter(x => x[1] != null)) }, end: snapshot() });
+    bb.goal = null; persist(); render();
+  },
+  "gd-open": b => { S.gdone = b.dataset.id; render(); },
+  "gd-close": () => { S.gdone = null; render(); },
+  "gd-del": async b => { if (await ask("Удалить цель из истории?")) { B().done = (B().done || []).filter(x => x.id !== b.dataset.id); S.gdone = null; persist(); render(); } },
+  "bh-f": b => { S.bhf = b.dataset.f; S.bhoff = 0; render(); },
+  "bh-off": b => { const n = (S.bhoff || 0) + (+b.dataset.d); if (n < 0) return; S.bhoff = n; render(); },
+  "bh-edit": b => { S.bedit = b.dataset.id; S.kv = "bio"; render(); window.scrollTo(0, 0); },
   "bio-save": () => {
     const day = ($("#bf-day") || {}).value || today(), vals = {};
     if (!ymdOk(day) || day > today()) return note("Проверь дату");
@@ -2209,7 +2307,7 @@ Object.assign(actions, {
     if (!Object.keys(vals).length) return note("Впиши хотя бы одно значение");
     const bb = B();
     if (S.bedit) { const e = bb.entries.find(x => x.id === S.bedit); if (e) { e.day = day; e.vals = vals; } }
-    else bb.entries.push({ id: uid8(), day, vals });
+    else bb.entries.push({ id: uid8(), day, vals, t: Date.now() });
     if (vals.weight != null) upsertWeight(day, vals.weight);
     persist(); S.bedit = null; render();
   },
