@@ -40,18 +40,6 @@
     --danger: #ff7b72; --badge-bg: #4a3a0e; --badge-fg: #ffd88a; --scrim: rgba(0, 0, 0, .6);
     color-scheme: dark;
   }
-  :root[data-theme="red"] {
-    --bg: #170f10; --fg: #f6eceb; --muted: #b9a2a0; --card: #251719; --chip: #3a2326;
-    --line: rgba(185, 162, 160, .28); --accent: #d32f2f; --on-accent: #ffffff; --link: #ff8a80;
-    --danger: #ffab91; --badge-bg: #4a3a0e; --badge-fg: #ffd88a; --scrim: rgba(0, 0, 0, .6);
-    color-scheme: dark;
-  }
-  :root[data-theme="blue"] {
-    --bg: #0b1426; --fg: #e8eefb; --muted: #9fb0cc; --card: #14213b; --chip: #1f2f50;
-    --line: rgba(159, 176, 204, .28); --accent: #2563c9; --on-accent: #ffffff; --link: #8fc1ff;
-    --danger: #ff7b72; --badge-bg: #4a3a0e; --badge-fg: #ffd88a; --scrim: rgba(0, 0, 0, .6);
-    color-scheme: dark;
-  }
   :root[data-theme="contrast"] {
     --bg: #f3f3f1; --fg: #111111; --muted: #84847f; --card: #ffffff; --chip: #e6e6e3; --line: rgba(17,17,17,.14);
     --accent: #d92b2b; --on-accent: #ffffff; --link: #b81f1f; --danger: #b81f1f;
@@ -345,6 +333,21 @@
   .hd b { display: block; font-size: 14px; } .hd small { font-size: 11px; color: var(--muted); }
   .hc b { display: block; font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; } .hc > small { font-size: 11px; color: var(--muted); }
   .hx2 { color: var(--muted); display: flex; }
+
+  .sgl { margin: 18px 4px 8px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .sgroup { border-radius: var(--r-card); background: var(--card); overflow: hidden; }
+  .srow { width: 100%; min-height: 68px; padding: 10px 14px; border: 0; background: none; color: var(--fg); text-align: left; display: flex; align-items: center; gap: 12px; }
+  .sgroup > .srow + .srow, .sgroup > .srow + .npad, .sgroup > .npad + .srow { border-top: 1px solid var(--line); }
+  .srow .si { color: var(--accent); display: flex; flex: none; }
+  .srow .g { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .srow b { font-size: 16px; } .srow small { font-size: 13px; color: var(--muted); }
+  .srow > svg { color: var(--muted); }
+  .npad { padding: 0 14px 14px; }
+  .swt { flex: none; width: 52px; height: 32px; padding: 3px; border: 0; border-radius: 999px; background: var(--chip); position: relative; }
+  .swt i { display: block; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .15s; }
+  .swt.on { background: var(--accent); } .swt.on i { transform: translateX(20px); }
+  .remind { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 10px 6px 10px 12px; border-radius: var(--r-card); background: var(--card); border-left: 4px solid var(--accent); font-size: 14px; }
+  .remind .g { flex: 1; min-width: 0; }
   .dlg { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--scrim); }
   .dlg[hidden] { display: none; }
   .dlg-box { width: 100%; max-width: 340px; padding: 18px; border-radius: 16px; background: var(--bg); color: var(--fg); }
@@ -417,7 +420,7 @@ function seedData() {
 async function initStore() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) { const d = JSON.parse(raw); D.workouts = d.workouts || []; D.bodyweight = d.bodyweight || []; D.sessions = d.sessions || []; D.nutri = d.nutri || null; D.seed1 = !!d.seed1; }
+    if (raw) { const d = JSON.parse(raw); D.workouts = d.workouts || []; D.bodyweight = d.bodyweight || []; D.sessions = d.sessions || []; D.nutri = d.nutri || null; D.settings = d.settings || null; D.seed1 = !!d.seed1; }
     localStorage.setItem(KEY + "-t", "1"); localStorage.removeItem(KEY + "-t");
     P.mode = "local";
     seedData(); persist();
@@ -693,7 +696,7 @@ const S = {
   tab: "diary", view: "list",      // внутри «Дневника»: list | edit | pick | session
   workouts: null, catalog: [], session: null, skew: 0,
   sheet: null, zoom: null, draft: null, pickFor: "draft", q: "", openEx: null, inputs: {}, photoIdx: null,
-  hist: null, hedit: null, hfrom: null, dropIn: {}, weekOff: 0, dayKey: null, wmenu: null, sel: null, sum: { period: (() => { try { const v = localStorage.getItem("gym-period"); return ["week", "month", "quarter", "all"].includes(v) ? v : "all"; } catch (e) { return "all"; } })(), metric: "top_weight", exercise: "", data: null }, lastKey: "",
+  hist: null, hedit: null, set: "home", exportSheet: false, hfrom: null, dropIn: {}, weekOff: 0, dayKey: null, wmenu: null, sel: null, sum: { period: (() => { try { const v = localStorage.getItem("gym-period"); return ["week", "month", "quarter", "all"].includes(v) ? v : "all"; } catch (e) { return "all"; } })(), metric: "top_weight", exercise: "", data: null }, lastKey: "",
 };
 
 /* ---------- диалоги (alert и confirm в артефактах не работают) ---------- */
@@ -830,7 +833,7 @@ function viewHub() {
     `<button class="wcard" data-act="hub" data-to="progress" style="min-height:76px">${icon("trend", 26)}<span style="flex:1;min-width:0"><span class="t" style="display:block">Прогресс и вес</span><span class="x" style="display:block">Графики по упражнениям, вес тела, лучшие результаты</span></span>${icon("right")}</button>`;
 }
 function viewList() {
-  let h = memWarn() + `<div class="kick" style="margin-left:0">${kickDate()}${weekNav()}</div>` + weekStrip(true);
+  let h = memWarn() + `<div class="kick" style="margin-left:0">${kickDate()}${weekNav()}</div>` + weekStrip(true) + remBanners();
   h += `<button class="chipbtn" data-act="open-hub" style="margin-bottom:10px">${icon("trend", 18)} Прогресс ${icon("right", 16)}</button>`;
   if (S.session) {
     h += `<button class="banner" data-act="resume">${icon("clock", 22)}<span class="grow"><b>Идёт тренировка</b><span>${esc(S.session.name)}</span></span>` +
@@ -1127,27 +1130,13 @@ async function hChange(t) {
 }
 
 /* ---------- Настройки ---------- */
-const THEMES = [["classic", "Классическое", "#ffffff"], ["dark", "Тёмное", "#101216"], ["red", "Красное", "#d32f2f"], ["blue", "Синее", "#2563c9"], ["contrast", "Контраст", "#111111"], ["night", "Ночь", "#e03a3a"], ["brutal", "Брутал", "#a81d22"], ["rose", "Роза", "#b5324f"], ["sage", "Зелёное", "#4a7c4f"]];
+const THEMES = [["classic", "Классическое", "#ffffff"], ["dark", "Тёмное", "#101216"], ["contrast", "Контраст", "#111111"], ["night", "Ночь", "#e03a3a"], ["brutal", "Брутал", "#a81d22"], ["rose", "Роза", "#b5324f"], ["sage", "Зелёное", "#4a7c4f"]];
 let theme = "classic";
 try { const t = localStorage.getItem("gym-theme"); if (THEMES.some(x => x[0] === t)) theme = t; } catch (e) {}
 function applyTheme() {
   if (theme === "classic") document.documentElement.removeAttribute("data-theme"); else document.documentElement.dataset.theme = theme;
 }
 applyTheme();
-function viewSettings() {
-  const cur = THEMES.find(x => x[0] === theme);
-  let h = memWarn() + "<h2>Настройки</h2>" +
-    `<button class="wcard" style="min-height:64px" data-act="theme-open"><span class="sw" style="background:${cur[2]}"></span>` +
-    `<span style="flex:1;min-width:0"><span class="t" style="display:block;font-size:16px">Оформление</span><span class="x" style="display:block">${cur[1]}</span></span>${icon("right")}</button>`;
-  if (S.themeSheet) {
-    h += '<div class="scrim" data-act="theme-close"></div><div class="sheet" role="dialog" aria-label="Оформление"><div class="sheet-in"><div class="grab"></div>' +
-      '<div class="sheet-h" style="margin-bottom:8px"><div class="h1">Оформление</div><button class="link" data-act="theme-close">Закрыть</button></div>' +
-      THEMES.map(([k, l, c]) => `<button class="opt ${k === theme ? "on" : ""}" data-act="theme" data-t="${k}" aria-pressed="${k === theme}"><span class="sw" style="background:${c}"></span><span style="flex:1">${l}</span>${k === theme ? icon("check") : ""}</button>`).join("") +
-      "</div></div>";
-  }
-  return h;
-}
-
 /* ---------- Прогресс ---------- */
 const PERIODS = { week: ["Неделя", 7], month: ["Месяц", 30], quarter: ["3 месяца", 90], all: ["Всё время", 0] };
 const METRICS = [["weight", "Вес тела"], ["top_weight", "Рабочий вес"], ["e1rm", "1ПМ"], ["volume", "Объём"]];
@@ -1299,7 +1288,7 @@ document.addEventListener("pointercancel", () => { dragging = false; });
 /* ---------- отрисовка ---------- */
 function render() {
   if (S.view === "session" && !S.session) S.view = "list";
-  const key = [S.tab, S.view, S.sheet || "", S.zoom ? "z" : "", S.themeSheet ? "t" : "", S.hedit || "", S.wmenu || "", S.dayKey || "", S.gsheet ? "g" : "", S.gdone || "", S.bhf || "", S.wedit || "", S.bedit || "", S.kv, S.kvp ? (S.kvp.sel ? "s" : S.kvp.scan ? "c" : S.kvp.manual ? "m" : "p") : ""].join(":");
+  const key = [S.tab, S.view, S.sheet || "", S.zoom ? "z" : "", S.themeSheet ? "t" : "", S.hedit || "", S.wmenu || "", S.dayKey || "", S.gsheet ? "g" : "", S.gdone || "", S.set || "", S.exportSheet ? "x" : "", S.bhf || "", S.wedit || "", S.bedit || "", S.kv, S.kvp ? (S.kvp.sel ? "s" : S.kvp.scan ? "c" : S.kvp.manual ? "m" : "p") : ""].join(":");
   const y = key === S.lastKey ? window.scrollY : 0;
   S.lastKey = key;
   let h;
@@ -1319,6 +1308,7 @@ function render() {
   if (S.tab === "progress") drawProgressChart();
 }
 function goBack() {
+  if (S.tab === "settings" && S.set !== "home") { S.set = "home"; render(); return; }
   if (S.tab === "kbzhu") { if (S.kvp) { kvClose(); return; } if (S.gsheet) { S.gsheet = null; render(); return; } if (S.wedit) { S.wedit = null; render(); return; } if (S.gdone) { S.gdone = null; render(); return; } if (S.kv === "biohist") { S.kv = "bio"; render(); return; } if (S.kv !== "home") { S.kv = "home"; S.bedit = null; render(); } return; }
   if (S.hedit && !S.zoom) {
     S.hedit = null;
@@ -1336,7 +1326,7 @@ function goBack() {
 }
 async function showTab(t) {
   if (typeof stopScan === "function") stopScan(); if (S.kvp) S.kvp = null;
-  S.tab = t; S.sheet = null; S.zoom = null; S.themeSheet = false; S.hedit = null;
+  S.tab = t; S.sheet = null; S.zoom = null; S.themeSheet = false; S.exportSheet = false; S.set = "home"; S.hedit = null;
   try {
     if (t === "history") await loadHistory();
     if (t === "progress") {
@@ -1356,7 +1346,107 @@ document.querySelectorAll(".tabs button").forEach(b => { b.onclick = () => showT
 
 /* ---------- действия ---------- */
 const nextName = () => { const L = "АБВГДЕЖЗИК"; const n = (S.workouts || []).length; return "Тренировка " + (L[n] || n + 1); };
+const APP_VERSION = "1.0.0";
+ICON.palette = '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/>';
+ICON.bell = '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"/>';
+ICON.download = '<path d="M6 3h8l4 4v14H6zM14 3v4h4M12 10v6M9.5 13.5L12 16l2.5-2.5"/>';
+ICON.info = '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>';
+const SETD = () => D.settings || (D.settings = { notif: { on: true, w: { on: false, days: [1, 3, 5], time: "18:00" }, b: { on: false, every: 7, time: "09:00" } }, dis: {} });
+const NT = () => SETD().notif;
+const WDN = [["ПН", 1], ["ВТ", 2], ["СР", 3], ["ЧТ", 4], ["ПТ", 5], ["СБ", 6], ["ВС", 0]];
+const nowHM = () => { const d = new Date(); return pad2(d.getHours()) + ":" + pad2(d.getMinutes()); };
+function dueReminders() {
+  const n = NT(), out = [], t = today(), dis = SETD().dis || {};
+  if (!n.on) return out;
+  if (n.w.on && n.w.days.includes(new Date().getDay()) && nowHM() >= n.w.time && dis.w !== t && !D.sessions.some(x => x.day === t))
+    out.push({ k: "w", text: "Сегодня по плану тренировка. Выбери её ниже и начни.", btn: null });
+  if (n.b.on && nowHM() >= n.b.time && dis.b !== t) {
+    const last = B().entries.slice().sort(byDayDesc)[0], ago = last ? daysBetween(last.day, t) : 999;
+    if (ago >= n.b.every) out.push({ k: "b", text: last ? `Пора внести замеры: последний был ${ago} дн назад.` : "Пора внести первые замеры.", btn: "Внести" });
+  }
+  return out;
+}
+function remBanners() {
+  return dueReminders().map(r => `<div class="remind"><span style="color:var(--accent);display:flex">${icon("bell", 20)}</span><span class="g">${esc(r.text)}</span>` +
+    (r.btn ? `<button class="link" data-act="rem-go" data-k="${r.k}">${r.btn}</button>` : "") + `<button class="ico" data-act="rem-x" data-k="${r.k}" aria-label="Скрыть напоминание">${icon("x", 16)}</button></div>`).join("");
+}
+const sw = (on, act, label, extra = "") => `<button class="swt ${on ? "on" : ""}" role="switch" aria-checked="${on}" aria-label="${label}" data-act="${act}" ${extra}><i></i></button>`;
+const srow = (ic, t, x, act) => `<button class="srow" data-act="${act}"><span class="si">${icon(ic, 22)}</span><span class="g"><b>${t}</b><small>${x}</small></span>${icon("right", 18)}</button>`;
+function viewSettings() {
+  const cur = THEMES.find(x => x[0] === theme) || THEMES[0], n = NT();
+  if (S.set === "notif") return backBar("Уведомления") + viewNotif();
+  if (S.set === "about") return backBar("О приложении") + viewAbout();
+  let h = memWarn() + '<div class="sec" style="margin-top:6px"><h2>Настройки</h2></div>' +
+    '<div class="sgl">Персонализация</div><div class="sgroup">' +
+    srow("palette", "Оформление", cur[1], "theme-open") +
+    srow("bell", "Уведомления", n.on && (n.w.on || n.b.on) ? "Включены" : "Напоминания о тренировках и замерах", "set-go\" data-to=\"notif") + "</div>" +
+    '<div class="sgl">Данные и приложение</div><div class="sgroup">' +
+    srow("download", "Экспорт данных", "Сохранить копию всех данных", "export-open") +
+    srow("info", "О приложении", "Версия " + APP_VERSION, "set-go\" data-to=\"about") + "</div>";
+  if (S.themeSheet) {
+    h += '<div class="scrim" data-act="theme-close"></div><div class="sheet" role="dialog" aria-label="Оформление"><div class="sheet-in"><div class="grab"></div>' +
+      '<div class="sheet-h" style="margin-bottom:8px"><div class="h1">Оформление</div><button class="link" data-act="theme-close">Закрыть</button></div>' +
+      THEMES.map(([k, l, c]) => `<button class="opt ${k === theme ? "on" : ""}" data-act="theme" data-t="${k}" aria-pressed="${k === theme}"><span class="sw" style="background:${c}"></span><span style="flex:1">${l}</span>${k === theme ? icon("check") : ""}</button>`).join("") +
+      "</div></div>";
+  }
+  if (S.exportSheet) h += viewExport();
+  return h;
+}
+function viewNotif() {
+  const n = NT();
+  let h = '<div class="sgroup"><div class="srow flat"><span class="si">' + icon("bell", 22) + '</span><span class="g"><b>Получать напоминания</b><small>Общий переключатель</small></span>' + sw(n.on, "n-master", "Получать напоминания") + "</div></div>";
+  h += '<div class="sgl">Тренировки</div><div class="sgroup"><div class="srow flat"><span class="g"><b>Напоминать о тренировках</b><small>В выбранные дни, если тренировки ещё не было</small></span>' + sw(n.w.on, "n-w", "Напоминать о тренировках") + "</div>";
+  if (n.w.on) h += '<div class="npad"><div class="periods" style="margin-top:0;flex-wrap:wrap" role="group" aria-label="Дни недели">' + WDN.map(([l, d]) => `<button data-act="n-day" data-d="${d}" class="${n.w.days.includes(d) ? "on" : ""}" style="flex:none;min-width:42px">${l}</button>`).join("") + `</div><label class="field-l" for="n-wt" style="margin-top:10px">Время</label><input id="n-wt" type="time" value="${esc(n.w.time)}"></div>`;
+  h += "</div>";
+  h += '<div class="sgl">Замеры</div><div class="sgroup"><div class="srow flat"><span class="g"><b>Напоминать о замерах</b><small>Если давно не вносил биометрические данные</small></span>' + sw(n.b.on, "n-b", "Напоминать о замерах") + "</div>";
+  if (n.b.on) h += '<div class="npad"><div class="periods" style="margin-top:0" role="group" aria-label="Как часто">' + [[7, "Раз в неделю"], [14, "Раз в 2 нед"], [30, "Раз в месяц"]].map(([d, l]) => `<button data-act="n-every" data-e="${d}" class="${n.b.every === d ? "on" : ""}">${l}</button>`).join("") + `</div><label class="field-l" for="n-bt" style="margin-top:10px">Время</label><input id="n-bt" type="time" value="${esc(n.b.time)}"></div>`;
+  h += "</div>";
+  h += '<div class="sub" style="margin:12px 4px">Напоминания показываются в приложении, когда ты его открываешь в выбранное время или позже. Уведомления в Telegram, когда приложение закрыто, требуют бота на сервере.</div>';
+  return h;
+}
+function exportText() { return JSON.stringify({ app: "gym-diary", version: APP_VERSION, exportedAt: new Date().toISOString(), data: D }, null, 1); }
+function viewExport() {
+  const n = D.workouts.filter(w => !w.archived).length, ses = D.sessions.filter(s => s.finishedAt != null).length, bio = B().entries.length, kb = Math.round(exportText().length / 1024);
+  return '<div class="scrim" data-act="export-close"></div><div class="sheet" role="dialog" aria-label="Экспорт данных"><div class="sheet-in"><div class="grab"></div>' +
+    '<div class="sheet-h" style="margin-bottom:8px"><div class="h1">Экспорт данных</div><button class="link" data-act="export-close">Закрыть</button></div>' +
+    `<div class="sub">Тренировок: ${n} · проведено: ${ses} · замеров: ${bio} · записей питания: ${N().log.length} · размер около ${kb} КБ (с фото).</div>` +
+    '<button class="btn primary" data-act="export-file">Скачать файл</button><button class="btn soft" data-act="export-copy">Скопировать данные</button>' +
+    '<div class="sub" style="margin-top:8px">Если файл не скачался (в некоторых версиях Telegram), используй «Скопировать» и вставь текст в заметки.</div></div></div>';
+}
+function viewAbout() {
+  const sz = (() => { try { return Math.round((localStorage.getItem(KEY) || "").length / 1024); } catch (e) { return 0; } })();
+  return '<div class="card" style="text-align:center;padding:22px"><div style="color:var(--accent);display:flex;justify-content:center">' + icon("trophy", 40) + '</div><div class="h1" style="margin-top:8px">Дневник тренировок</div><div class="sub">Версия ' + APP_VERSION + "</div></div>" +
+    '<div class="sgroup"><div class="srow flat"><span class="g"><b>Где хранятся данные</b><small>Только на этом устройстве, в памяти Telegram. Если очистить данные приложения Telegram, они пропадут: делай экспорт.</small></span></div>' +
+    `<div class="srow flat"><span class="g"><b>Занято</b><small>около ${sz} КБ</small></span></div></div>` +
+    '<div class="sub" style="margin:12px 4px">Тренировки, история, прогресс, питание (КБЖУ) и биометрия в одном приложении.</div>';
+}
 const actions = {
+  "set-go": b => { S.set = b.dataset.to; render(); },
+  "export-open": () => { S.exportSheet = true; render(); },
+  "export-close": () => { S.exportSheet = false; render(); },
+  "export-copy": async () => {
+    const t = exportText();
+    try { await navigator.clipboard.writeText(t); note("Данные скопированы. Вставь их в заметки или сообщение."); }
+    catch (e) {
+      const ta = document.createElement("textarea"); ta.value = t; ta.style.cssText = "position:fixed;opacity:0"; document.body.appendChild(ta); ta.select();
+      let ok = false; try { ok = document.execCommand("copy"); } catch (e2) {}
+      ta.remove(); note(ok ? "Данные скопированы." : "Не удалось скопировать. Попробуй «Скачать файл».");
+    }
+  },
+  "export-file": () => {
+    try {
+      const url = URL.createObjectURL(new Blob([exportText()], { type: "application/json" })), a = document.createElement("a");
+      a.href = url; a.download = "gym-diary-" + today() + ".json"; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch (e) { note("Не удалось создать файл. Используй «Скопировать данные»."); }
+  },
+  "n-master": () => { NT().on = !NT().on; persist(); render(); },
+  "n-w": () => { NT().w.on = !NT().w.on; persist(); render(); },
+  "n-b": () => { NT().b.on = !NT().b.on; persist(); render(); },
+  "n-day": b => { const d = +b.dataset.d, a = NT().w.days, i = a.indexOf(d); if (i >= 0) a.splice(i, 1); else a.push(d); persist(); render(); },
+  "n-every": b => { NT().b.every = +b.dataset.e; persist(); render(); },
+  "rem-x": b => { SETD().dis[b.dataset.k] = today(); persist(); render(); },
+  "rem-go": b => { SETD().dis[b.dataset.k] = today(); persist(); S.tab = "kbzhu"; S.kv = "bio"; render(); },
   day: async b => { S.dayKey = b.dataset.day; S.view = "day"; try { await loadHistory(); } catch (e) {} render(); },
   "wk-prev": () => { S.weekOff++; render(); },
   "wk-next": () => { if (S.weekOff > 0) S.weekOff--; render(); },
@@ -2134,7 +2224,7 @@ function goodDir(f, type) {
   if (f === "biceps") return t === "gain" ? 1 : 0;
   return 0;
 }
-const HCOLS = [["weight", "Вес", "кг"], ["waist", "Талия", "см"], ["hips", "Бёдра", "см"], ["biceps", "Бицепс", "см"]];
+const HCOLS = [["weight", "Вес", "кг"], ["waist", "Талия", "см"], ["chest", "Грудь", "см"], ["biceps", "Бицепс", "см"]];
 function viewBioHist() {
   const r = bhRange(), all = B().entries.slice().sort(byDayDesc);
   const list = all.filter(e => (!r.from || e.day >= r.from) && (!r.to || e.day <= r.to));
@@ -2147,7 +2237,7 @@ function viewBioHist() {
     const vs = list.filter(e => e.vals[f] != null).map(e => e.vals[f]), a = avg(vs);
     const cv = chron.filter(e => e.vals[f] != null).map(e => e.vals[f]), d = cv.length > 1 ? cv[cv.length - 1] - cv[0] : null;
     const gd = goodDir(f), cls = d == null || Math.abs(d) < 0.05 ? "" : gd === 0 ? "" : (d * gd > 0 ? "up" : "down");
-    return `<div><b>${a == null ? "—" : fmtNum(r1(a))}<small> ${a == null ? "" : u}</small></b><span>${f === "weight" ? "Вес" : f === "waist" ? "Обхват талии" : f === "hips" ? "Обхват бёдер" : "Бицепс"}</span>` +
+    return `<div><b>${a == null ? "—" : fmtNum(r1(a))}<small> ${a == null ? "" : u}</small></b><span>${f === "weight" ? "Вес" : f === "waist" ? "Обхват талии" : f === "chest" ? "Обхват груди" : "Бицепс"}</span>` +
       (d != null && Math.abs(d) >= 0.05 ? `<i class="${cls}">${d > 0 ? "↑" : "↓"} ${fmtNum(r1(Math.abs(d)))}</i>` : "<i></i>") + "</div>";
   }).join("") + "</div></div>";
   h += '<div class="sec"><h2>Записи</h2></div>';
@@ -2321,6 +2411,8 @@ document.addEventListener("input", e => {
   else if (t.id === "kv-dn") S.calc.name = t.value;
   else if (t.id === "kv-cooked" || t.id === "kv-portion") { S.calc[t.id === "kv-cooked" ? "cooked" : "portion"] = t.value; $("#kv-res").innerHTML = calcRes(); }
   else if (t.id === "kv-g" && S.kvp && S.kvp.sel) { const g = parseNum(t.value); $("#kv-gr").textContent = g > 0 ? macTxt(mac(S.kvp.sel, g)) : ""; }
+  else if (t.id === "n-wt") { NT().w.time = t.value || "18:00"; persist(); }
+  else if (t.id === "n-bt") { NT().b.time = t.value || "09:00"; persist(); }
   else if (t.id === "kv-kg") { N().kcalGoal = Math.max(0, parseInt(t.value, 10) || 0); persist(); }
   else if (t.id === "g-target" && S.gsheet) { S.gsheet.target = t.value; const r = recMonths(S.gsheet.type, parseNum(t.value)), el = $("#g-rec"); if (el) el.textContent = el.textContent.replace(/Рекомендуем: \d+ мес/, "Рекомендуем: " + r + " мес"); }
 });
