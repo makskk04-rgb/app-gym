@@ -103,7 +103,10 @@
     width: 100%; font: inherit; color: var(--fg); background: var(--bg);
     border: 1px solid transparent; border-radius: 10px; padding: 0 12px; height: 48px;
   }
-  input:focus, select:focus { border-color: var(--accent); }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  textarea { width: 100%; font: inherit; color: var(--fg); background: var(--bg); border: 1px solid transparent; border-radius: 10px; padding: 10px 12px; resize: vertical; min-height: 56px; margin-top: 8px; }
+  .hx-note { margin-top: 3px; font-size: 13px; color: var(--muted); font-style: italic; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .hxname { flex: 1; min-width: 0; font-weight: 700; }
   .field-l { display: block; margin: 0 0 4px 2px; font-size: 12px; color: var(--muted); }
   .vh { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 
@@ -395,7 +398,8 @@ const KEY = "gym-diary-v1";
 function persist() {
   if (P.mode !== "local") return;
   try { localStorage.setItem(KEY, JSON.stringify(D)); }
-  catch (e) { note("Не удалось сохранить данные: память заполнена. Удали лишние фото."); }
+  catch (e) { note("Не удалось сохранить данные: память заполнена. Удали лишние фото."); return; }
+  syncDirty();
 }
 const saveApp = persist;
 const saveSession = persist;
@@ -420,11 +424,14 @@ function seedData() {
 async function initStore() {
   try {
     const raw = localStorage.getItem(KEY);
+    smLoad(!!raw);
     if (raw) { const d = JSON.parse(raw); D.workouts = d.workouts || []; D.bodyweight = d.bodyweight || []; D.sessions = d.sessions || []; D.nutri = d.nutri || null; D.settings = d.settings || null; D.seed1 = !!d.seed1; }
     localStorage.setItem(KEY + "-t", "1"); localStorage.removeItem(KEY + "-t");
     P.mode = "local";
-    seedData(); persist();
-  } catch (e) { P.mode = "memory"; seedData(); }
+    try { await Promise.race([syncNow(false), new Promise(r => setTimeout(r, 5000))]); } catch (e) {}
+    bootDone = true;
+    const need = !D.seed1; seedData(); if (need) persist();
+  } catch (e) { P.mode = "memory"; bootDone = true; seedData(); }
 }
 
 /* ---- поиск по данным ---- */
@@ -597,7 +604,7 @@ function history() {
       volume += ss.reduce((a, x) => a + setVol(x), 0);
       nSets += ss.length;
       if (rec.weight || rec.e1rm || rec.reps) nRec++;
-      exs.push({ name: n, sets: ss.map(x => ({ weight: x.weight, reps: x.reps, drops: x.drops || [] })), top: { weight: topW, reps: topReps }, e1rm: round1(e1), records: rec });
+      exs.push({ name: n, note: ((s.exercises.find(q => q.name === n) || {}).note) || "", sets: ss.map(x => ({ weight: x.weight, reps: x.reps, drops: x.drops || [] })), top: { weight: topW, reps: topReps }, e1rm: round1(e1), records: rec });
     }
     if (s.finishedAt != null) {
       out.push({
@@ -1058,7 +1065,7 @@ function histCard(s) {
     `<div class="meta"><span>${icon("clock", 16)}${fmtMin(s.duration)}</span><span>Объём ${fmtNum(s.volume)} кг</span><span>${s.sets} ${plural(s.sets, SETS)}</span></div>` +
     s.exercises.map(e =>
       `<div class="hx"><div class="hx-n">${esc(e.name)}${recBadges(e.records)}</div>` +
-      `<div class="hx-s">${e.sets.map(setStr).join(" · ")}</div></div>`).join("") + `</article>`;
+      `<div class="hx-s">${e.sets.map(setStr).join(" · ")}</div>` + (e.note ? `<div class="hx-note">${esc(e.note)}</div>` : "") + `</div>`).join("") + `</article>`;
 }
 function viewHistory() {
   if (S.hedit) return viewHEdit();
@@ -1077,8 +1084,9 @@ function viewHEdit() {
     `<div style="flex:1;min-width:0"><label class="field-l" for="hm">Длительность, мин</label><input id="hm" type="text" inputmode="numeric" value="${mins}"></div></div></div>`;
   h += s.exercises.map(e => {
     const ss = s.sets.filter(x => x.exercise === e.name);
-    return `<div class="card"><div style="display:flex;align-items:center;gap:8px"><div class="b" style="flex:1;min-width:0;overflow-wrap:anywhere">${esc(e.name)}</div>` +
+    return `<div class="card"><div style="display:flex;align-items:center;gap:8px"><input class="hxname" data-hx="${esc(e.name)}" value="${esc(e.name)}" maxlength="60" autocomplete="off" aria-label="Название упражнения">` +
       `<button class="ico" data-act="hdel-ex" data-name="${esc(e.name)}" aria-label="Убрать упражнение ${esc(e.name)}">${icon("x", 16)}</button></div>` +
+      `<textarea data-hnote="${esc(e.name)}" rows="2" maxlength="300" placeholder="Заметка к упражнению" aria-label="Заметка к упражнению ${esc(e.name)}">${esc(e.note || "")}</textarea>` +
       ss.map((x, k) => `<div class="setrow hs"><span class="n">${k + 1}</span>` +
         `<input data-hs="${esc(x.id)}" data-f="w" type="text" inputmode="decimal" value="${fmtNum(x.weight)}" aria-label="Вес, подход ${k + 1}"><span class="u">кг ×</span>` +
         `<input data-hs="${esc(x.id)}" data-f="r" type="text" inputmode="numeric" value="${x.reps}" aria-label="Повторы, подход ${k + 1}">` +
@@ -1086,7 +1094,8 @@ function viewHEdit() {
         (x.drops || []).map((d, j) => `<div class="setrow hs"><span class="n" style="color:var(--accent)">↓</span>` +
           `<input data-hd="${esc(x.id)}:${j}" data-f="w" type="text" inputmode="decimal" value="${fmtNum(d.weight)}" aria-label="Вес дроп-сета, подход ${k + 1}"><span class="u">кг ×</span>` +
           `<input data-hd="${esc(x.id)}:${j}" data-f="r" type="text" inputmode="numeric" value="${d.reps}" aria-label="Повторы дроп-сета, подход ${k + 1}">` +
-          `<button class="ico" data-act="hdel-drop" data-id="${esc(x.id)}" data-j="${j}" aria-label="Удалить ступень дроп-сета">${icon("x", 16)}</button></div>`).join("")).join("") +
+          `<button class="ico" data-act="hdel-drop" data-id="${esc(x.id)}" data-j="${j}" aria-label="Удалить ступень дроп-сета">${icon("x", 16)}</button></div>`).join("") +
+        ((x.drops || []).length < 8 ? `<button class="dropadd" data-act="hadd-drop" data-id="${esc(x.id)}">+ Дроп-сет к подходу ${k + 1}</button>` : "")).join("") +
       `<button class="btn plain" style="margin-top:6px;background:var(--bg);color:var(--link)" data-act="hadd-set" data-name="${esc(e.name)}">${icon("plus", 18)} Подход</button></div>`;
   }).join("");
   h += `<div class="card"><label class="field-l" for="hnew">Добавить упражнение</label><div style="display:flex;gap:8px">` +
@@ -1113,6 +1122,20 @@ async function hChange(t) {
     if (t.dataset.f === "w") { const v = parseNum(t.value); if (!(v >= 0 && v <= 1000)) return fail("Проверь вес"); dr.weight = v; }
     else { const v = parseInt(t.value, 10); if (!(v >= 1 && v <= 1000)) return fail("Проверь повторы"); dr.reps = v; }
     t.value = t.dataset.f === "w" ? fmtNum(dr.weight) : dr.reps;
+  } else if (t.dataset.hx !== undefined) {
+    const old = t.dataset.hx, nn = normName(t.value).slice(0, 60);
+    if (!nn) return fail("Укажи название упражнения");
+    if (nn === old) { t.value = old; return; }
+    if (s.exercises.some(e => e.name === nn)) return fail("Такое упражнение уже есть в этой тренировке");
+    const ex = s.exercises.find(e => e.name === old); if (!ex) return;
+    ex.name = nn; s.sets.forEach(x => { if (x.exercise === old) x.exercise = nn; });
+    t.dataset.hx = nn; t.value = nn;
+    const card = t.closest(".card");
+    if (card) card.querySelectorAll("[data-hnote],[data-name]").forEach(el => { if (el.dataset.hnote !== undefined) el.dataset.hnote = nn; if (el.dataset.name !== undefined) el.dataset.name = nn; });
+    saveSession(s); return;
+  } else if (t.dataset.hnote !== undefined) {
+    const ex = s.exercises.find(e => e.name === t.dataset.hnote); if (!ex) return;
+    const v = t.value.trim().slice(0, 300); if (v) ex.note = v; else delete ex.note;
   } else if (t.id === "hn") {
     s.name = cleanTitle(t.value) || s.name; t.value = s.name;
   } else if (t.id === "hd") {
@@ -1376,11 +1399,13 @@ function viewSettings() {
   const cur = THEMES.find(x => x[0] === theme) || THEMES[0], n = NT();
   if (S.set === "notif") return backBar("Уведомления") + viewNotif();
   if (S.set === "about") return backBar("О приложении") + viewAbout();
+  if (S.set === "backup") return backBar("Резервное копирование") + viewBackup();
   let h = memWarn() + '<div class="sec" style="margin-top:6px"><h2>Настройки</h2></div>' +
     '<div class="sgl">Персонализация</div><div class="sgroup">' +
     srow("palette", "Оформление", cur[1], "theme-open") +
     srow("bell", "Уведомления", n.on && (n.w.on || n.b.on) ? "Включены" : "Напоминания о тренировках и замерах", "set-go\" data-to=\"notif") + "</div>" +
     '<div class="sgl">Данные и приложение</div><div class="sgroup">' +
+    srow("cloud", "Резервное копирование", TGW ? (SM.dirty ? "Облако Telegram · ждёт отправки" : "Облако Telegram · синхронизировано") : "Облако и восстановление из файла", "set-go\" data-to=\"backup") +
     srow("download", "Экспорт данных", "Сохранить копию всех данных", "export-open") +
     srow("info", "О приложении", "Версия " + APP_VERSION, "set-go\" data-to=\"about") + "</div>";
   if (S.themeSheet) {
@@ -1416,12 +1441,17 @@ function viewExport() {
 function viewAbout() {
   const sz = (() => { try { return Math.round((localStorage.getItem(KEY) || "").length / 1024); } catch (e) { return 0; } })();
   return '<div class="card" style="text-align:center;padding:22px"><div style="color:var(--accent);display:flex;justify-content:center">' + icon("trophy", 40) + '</div><div class="h1" style="margin-top:8px">Дневник тренировок</div><div class="sub">Версия ' + APP_VERSION + "</div></div>" +
-    '<div class="sgroup"><div class="srow flat"><span class="g"><b>Где хранятся данные</b><small>Только на этом устройстве, в памяти Telegram. Если очистить данные приложения Telegram, они пропадут: делай экспорт.</small></span></div>' +
+    '<div class="sgroup"><div class="srow flat"><span class="g"><b>Где хранятся данные</b><small>На этом устройстве и в облаке Telegram (если приложение открыто в Telegram, см. «Резервное копирование»). Фото упражнений хранятся только на устройстве.</small></span></div>' +
     `<div class="srow flat"><span class="g"><b>Занято</b><small>около ${sz} КБ</small></span></div></div>` +
     '<div class="sub" style="margin:12px 4px">Тренировки, история, прогресс, питание (КБЖУ) и биометрия в одном приложении.</div>';
 }
 const actions = {
   "set-go": b => { S.set = b.dataset.to; render(); },
+  "sync-now": () => syncNow(true),
+  "cl-push": async () => { if (await ask("Заменить облачную копию данными с этого устройства?")) cloudForcePush(); },
+  "cl-pull": async () => { if (await ask("Заменить данные на этом устройстве данными из облака?")) cloudForcePull(); },
+  "imp-pick": () => { const f = $("#imp-file"); if (f) f.click(); },
+  "imp-text": () => { const t = ($("#imp-txt") || {}).value || ""; if (!t.trim()) return note("Вставь текст копии в поле выше."); importText(t); },
   "export-open": () => { S.exportSheet = true; render(); },
   "export-close": () => { S.exportSheet = false; render(); },
   "export-copy": async () => {
@@ -1610,6 +1640,15 @@ const actions = {
     x.drops.splice(+b.dataset.j, 1); if (!x.drops.length) delete x.drops;
     saveSession(s); render();
   },
+  "hadd-drop": b => {
+    const s = histSession(), x = s && s.sets.find(y => y.id === b.dataset.id);
+    if (!x) return;
+    x.drops = x.drops || [];
+    if (x.drops.length >= 8) return note("Не больше 8 ступеней");
+    const last = x.drops[x.drops.length - 1] || x;
+    x.drops.push({ weight: Math.round(last.weight * 0.8 * 2) / 2, reps: last.reps });
+    saveSession(s); render();
+  },
   "hadd-set": b => {
     const s = histSession(); if (!s) return;
     const own = s.sets.filter(x => x.exercise === b.dataset.name), last = own[own.length - 1];
@@ -1659,7 +1698,8 @@ document.addEventListener("input", e => {
   }
 });
 document.addEventListener("change", e => {
-  if (e.target.id === "pex") { S.sum.exercise = e.target.value; calc(); }
+  if (e.target.id === "imp-file") { const f = e.target.files && e.target.files[0]; if (f) f.text().then(importText).catch(() => note("Не удалось прочитать файл.")); e.target.value = ""; }
+  else if (e.target.id === "pex") { S.sum.exercise = e.target.value; calc(); }
   else if (S.tab === "history" && S.hedit) hChange(e.target);
 });
 
@@ -2417,6 +2457,178 @@ document.addEventListener("input", e => {
   else if (t.id === "g-target" && S.gsheet) { S.gsheet.target = t.value; const r = recMonths(S.gsheet.type, parseNum(t.value)), el = $("#g-rec"); if (el) el.textContent = el.textContent.replace(/Рекомендуем: \d+ мес/, "Рекомендуем: " + r + " мес"); }
 });
 
+/* ---------- Синхронизация: облако Telegram (по аккаунту) ---------- */
+ICON.cloud = '<path d="M7 18h10.5a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.6 9.2 4.5 4.5 0 0 0 7 18z"/>';
+const TGW = (() => { try { const w = window.Telegram && Telegram.WebApp; return w && w.CloudStorage && w.isVersionAtLeast && w.isVersionAtLeast("6.9") ? w : null; } catch (e) { return null; } })();
+const SM_KEY = "gym-sync-v1";
+let SM = { rev: 0, dirty: true, at: 0, err: "" };
+let editCount = 0, syncing = false, syncAgain = false, upTimer = null, bootDone = false;
+function smLoad(hadData) {
+  try { const v = JSON.parse(localStorage.getItem(SM_KEY) || "null"); if (v && typeof v.rev === "number") { SM = Object.assign({ rev: 0, dirty: true, at: 0, err: "" }, v); return; } } catch (e) {}
+  SM = { rev: 0, dirty: !!hadData, at: 0, err: "" };
+}
+function smSave() { try { localStorage.setItem(SM_KEY, JSON.stringify(SM)); } catch (e) {} }
+function syncDirty() {
+  editCount++; SM.dirty = true; smSave();
+  if (!TGW) return;
+  clearTimeout(upTimer); upTimer = setTimeout(() => syncNow(false), 3000);
+}
+const csCall = (m, ...a) => new Promise((res, rej) => {
+  let done = false; const t = setTimeout(() => { if (!done) { done = true; rej(new Error("Нет ответа от облака Telegram")); } }, 8000);
+  try { TGW.CloudStorage[m](...a, (err, v) => { if (done) return; done = true; clearTimeout(t); if (err) rej(new Error(String(err))); else res(v); }); }
+  catch (e) { done = true; clearTimeout(t); rej(e); }
+});
+async function packStr(str) {
+  let bytes = new TextEncoder().encode(str), z = 0;
+  if (window.CompressionStream) {
+    try { const c = new CompressionStream("gzip"), w = c.writable.getWriter(); w.write(bytes); w.close(); bytes = new Uint8Array(await new Response(c.readable).arrayBuffer()); z = 1; } catch (e) { z = 0; bytes = new TextEncoder().encode(str); }
+  }
+  let bin = ""; for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+  return { z, b64: btoa(bin) };
+}
+async function unpackStr(b64, z) {
+  const bin = atob(b64); let bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  if (z) {
+    if (!window.DecompressionStream) throw new Error("Обнови Telegram: он не умеет распаковывать копию");
+    const d = new DecompressionStream("gzip"), w = d.writable.getWriter(); w.write(bytes); w.close(); bytes = new Uint8Array(await new Response(d.readable).arrayBuffer());
+  }
+  return new TextDecoder().decode(bytes);
+}
+const CHUNK = 3800;
+async function cloudMeta() { const v = await csCall("getItem", "gd_meta"); if (!v) return null; try { const m = JSON.parse(v); return m && typeof m.rev === "number" && m.n >= 0 ? m : null; } catch (e) { return null; } }
+async function cloudRead() {
+  const m = await cloudMeta(); if (!m) return null;
+  const keys = Array.from({ length: m.n }, (_, i) => "gd_" + i);
+  const o = m.n ? await csCall("getItems", keys) : {};
+  let b64 = ""; for (const k of keys) { if (typeof o[k] !== "string" || !o[k]) throw new Error("Копия в облаке неполная. Попробуй ещё раз."); b64 += o[k]; }
+  return { meta: m, data: JSON.parse(await unpackStr(b64, m.z)) };
+}
+async function cloudWrite(prevN) {
+  const e0 = editCount, json = JSON.stringify(D, (k, v) => k === "photo" ? null : v);
+  const { z, b64 } = await packStr(json), n = Math.ceil(b64.length / CHUNK);
+  if (n > 900) throw new Error("Данных слишком много для облака Telegram");
+  for (let i = 0; i < n; i++) await csCall("setItem", "gd_" + i, b64.slice(i * CHUNK, (i + 1) * CHUNK));
+  const rev = Math.max(Date.now(), (SM.rev || 0) + 1);
+  await csCall("setItem", "gd_meta", JSON.stringify({ v: 1, rev, n, z, len: json.length }));
+  if (prevN > n) await csCall("removeItems", Array.from({ length: prevN - n }, (_, i) => "gd_" + (n + i)));
+  return { rev, clean: e0 === editCount };
+}
+function localSave() { try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) {} }
+function photoMap() {
+  const m = {}; for (const w of D.workouts) for (const e of w.exercises) if (e.photo) m[e.name] = e.photo;
+  for (const s of D.sessions) for (const e of s.exercises) if (e.photo) m[e.name] = e.photo;
+  return m;
+}
+function adopt(doc) {
+  const pm = photoMap();
+  try { const cur = localStorage.getItem(KEY); if (cur) localStorage.setItem(KEY + "-prev", cur); } catch (e) {}
+  D.workouts = doc.workouts || []; D.bodyweight = doc.bodyweight || []; D.sessions = doc.sessions || [];
+  D.nutri = doc.nutri || null; D.settings = doc.settings || null; D.seed1 = !!doc.seed1;
+  for (const w of D.workouts) for (const e of w.exercises) if (!e.photo && pm[e.name]) e.photo = pm[e.name];
+  for (const s of D.sessions) for (const e of s.exercises) if (!e.photo && pm[e.name]) e.photo = pm[e.name];
+  localSave();
+}
+function mergeDocs(L, C) {
+  const M = clone(L);
+  const un = (a, b, key) => { const m = new Map(); (b || []).forEach(x => m.set(x[key], x)); (a || []).forEach(x => m.set(x[key], x)); return [...m.values()]; };
+  M.sessions = un(L.sessions, C.sessions, "id");
+  M.bodyweight = un(L.bodyweight, C.bodyweight, "day");
+  const out = new Map((C.workouts || []).map(w => [w.id, w]));
+  for (const lw of (L.workouts || [])) {
+    if (out.has(lw.id)) { out.set(lw.id, lw); continue; }
+    const twin = [...out.values()].find(x => !x.archived && !lw.archived && x.name === lw.name);
+    if (twin) { M.sessions.forEach(s => { if (s.workoutId === lw.id) s.workoutId = twin.id; }); }
+    else out.set(lw.id, lw);
+  }
+  M.workouts = [...out.values()];
+  const ln = L.nutri, cn = C.nutri;
+  if (ln && cn) {
+    const n = M.nutri;
+    n.prods = un(ln.prods, cn.prods, "id"); n.log = un(ln.log, cn.log, "id");
+    n.kcalGoal = ln.kcalGoal || cn.kcalGoal || 0; n.goal = ln.goal || cn.goal;
+    const lb = ln.bio || {}, cb = cn.bio || {};
+    n.bio = Object.assign({}, cb, lb, { entries: un(lb.entries, cb.entries, "id"), done: un(lb.done, cb.done, "id"), goal: lb.goal || cb.goal || null });
+  } else if (!ln && cn) M.nutri = cn;
+  M.settings = L.settings || C.settings || null;
+  M.seed1 = !!(L.seed1 || C.seed1);
+  return M;
+}
+async function syncNow(manual) {
+  if (!TGW) { if (manual) note("Облако Telegram работает только внутри Telegram (версия 6.9 и новее). Здесь пользуйся экспортом и импортом файла."); return { ok: false }; }
+  if (syncing) { syncAgain = true; return { ok: false, busy: true }; }
+  syncing = true; let replaced = false, ok = false;
+  try {
+    const meta = await cloudMeta();
+    if (!meta) {
+      const r = await cloudWrite(0); SM.rev = r.rev; SM.dirty = !r.clean;
+    } else if (meta.rev === SM.rev) {
+      if (SM.dirty) { const r = await cloudWrite(meta.n); SM.rev = r.rev; SM.dirty = !r.clean; }
+    } else {
+      const c = await cloudRead();
+      if (!SM.dirty) { adopt(c.data); SM.rev = c.meta.rev; replaced = true; }
+      else {
+        adopt(mergeDocs(clone(D), c.data)); replaced = true;
+        const r = await cloudWrite(c.meta.n); SM.rev = r.rev; SM.dirty = !r.clean;
+      }
+    }
+    SM.at = Date.now(); SM.err = ""; ok = true; smSave();
+  } catch (e) { SM.err = e.message || "Ошибка синхронизации"; smSave(); if (manual) note("Не удалось синхронизировать: " + SM.err); }
+  finally {
+    syncing = false;
+    if (syncAgain) { syncAgain = false; setTimeout(() => syncNow(false), 1000); }
+  }
+  if (replaced && bootDone) { location.reload(); return { ok, replaced }; }
+  if (S.tab === "settings" && S.set === "backup") render();
+  if (manual && ok) note(replaced ? "Данные объединены с облаком." : "Готово: данные синхронизированы.");
+  return { ok, replaced };
+}
+async function cloudForcePush() {
+  try {
+    const meta = await cloudMeta(), r = await cloudWrite(meta ? meta.n : 0);
+    SM.rev = r.rev; SM.dirty = !r.clean; SM.at = Date.now(); SM.err = ""; smSave(); render(); note("Облако обновлено данными с этого устройства.");
+  } catch (e) { note("Не удалось отправить: " + e.message); }
+}
+async function cloudForcePull() {
+  try {
+    const c = await cloudRead(); if (!c) return note("В облаке пока ничего нет.");
+    adopt(c.data); SM.rev = c.meta.rev; SM.dirty = false; SM.at = Date.now(); SM.err = ""; smSave(); location.reload();
+  } catch (e) { note("Не удалось загрузить: " + e.message); }
+}
+function parseBackup(t) {
+  let j; try { j = JSON.parse(t); } catch (e) { return null; }
+  const d = j && j.data && typeof j.data === "object" ? j.data : j;
+  return d && Array.isArray(d.workouts) && Array.isArray(d.sessions) ? d : null;
+}
+async function importText(t) {
+  const d = parseBackup(t);
+  if (!d) return note("Это не похоже на копию «Дневника тренировок». Нужен файл из «Экспорт данных».");
+  const mine = D.sessions.filter(s => s.finishedAt != null).length, theirs = d.sessions.filter(s => s.finishedAt != null).length;
+  if (!(await ask(`Заменить данные на этом устройстве данными из копии? Сейчас проведено тренировок: ${mine}, в копии: ${theirs}.`))) return;
+  adopt(d); persist(); location.reload();
+}
+const fmtSyncAt = ms => ms ? new Date(ms).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "ещё не было";
+function viewBackup() {
+  let h = "";
+  if (TGW) {
+    h += '<div class="sgroup"><div class="srow flat"><span class="si">' + icon("cloud", 22) + '</span><span class="g"><b>Облако Telegram: включено</b><small>Последняя синхронизация: ' + fmtSyncAt(SM.at) + (SM.dirty ? " · есть несохранённые изменения" : "") + "</small></span></div>" +
+      (SM.err ? '<div class="srow flat"><span class="g"><b>Ошибка</b><small>' + esc(SM.err) + "</small></span></div>" : "") + "</div>" +
+      '<button class="btn primary" data-act="sync-now">Синхронизировать сейчас</button>' +
+      '<div class="sub" style="margin:10px 4px">Данные сохраняются в облаке автоматически через несколько секунд после изменения и подгружаются при открытии приложения. Войди в тот же аккаунт Telegram на другом устройстве и открой этого бота: данные будут там.</div>' +
+      '<div class="sgl">Принудительно</div><div class="sgroup">' +
+      '<button class="srow" data-act="cl-push"><span class="g"><b>Отправить в облако с этого устройства</b><small>Облачная копия будет заменена</small></span>' + icon("right", 18) + "</button>" +
+      '<button class="srow" data-act="cl-pull"><span class="g"><b>Загрузить из облака сюда</b><small>Данные на этом устройстве будут заменены</small></span>' + icon("right", 18) + "</button></div>";
+  } else {
+    h += '<div class="sgroup"><div class="srow flat"><span class="si">' + icon("cloud", 22) + '</span><span class="g"><b>Облако Telegram недоступно</b><small>Приложение открыто не в Telegram или версия Telegram старше 6.9. Автосинхронизация работает только внутри Telegram.</small></span></div></div>';
+  }
+  h += '<div class="sgl">Файл</div><div class="card"><div class="sub">Перенос вручную: сделай копию в «Экспорт данных» и восстанови её здесь.</div>' +
+    '<button class="btn soft" data-act="imp-pick">Восстановить из файла</button>' +
+    '<input id="imp-file" type="file" accept=".json,.txt,application/json,text/plain" class="vh" tabindex="-1">' +
+    '<textarea id="imp-txt" rows="3" placeholder="…или вставь сюда скопированный текст копии"></textarea>' +
+    '<button class="btn soft" data-act="imp-text">Восстановить из текста</button></div>' +
+    '<div class="sub" style="margin:12px 4px">Что хранится в копии: тренировки, история, питание, замеры, цели и настройки. Фото упражнений остаются только на устройстве, где они добавлены.</div>';
+  return h;
+}
+
 /* ---------- Telegram ---------- */
 try {
   const tg = window.Telegram && Telegram.WebApp;
@@ -2424,6 +2636,8 @@ try {
     tg.ready(); tg.expand();
   }
 } catch (e) {}
+
+document.addEventListener("visibilitychange", () => { if (bootDone && TGW) syncNow(false); });
 
 /* ---------- старт ---------- */
 (async () => {
