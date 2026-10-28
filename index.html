@@ -382,6 +382,9 @@
   .scanbox video { display: block; width: 100%; height: 52vh; object-fit: cover; }
   .scanframe { position: absolute; left: 8%; width: 84%; top: 30%; height: 40%; border: 2.5px solid #ffd54a; border-radius: 12px; box-shadow: 0 0 0 999px rgba(0,0,0,.38); pointer-events: none; }
   .scantorch { position: absolute; right: 10px; bottom: 10px; min-height: 40px; padding: 0 14px; border: 0; border-radius: 999px; background: rgba(0,0,0,.6); color: #fff; font-weight: 600; }
+  .normrow { display: flex; align-items: center; gap: 8px; margin: -4px 4px 10px; }
+  .normrow .sub { flex: 1; min-width: 0; }
+  .chipb { flex: none; min-height: 32px; padding: 0 12px; border: 1.5px solid var(--line); border-radius: 999px; background: transparent; color: var(--link); font-weight: 600; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -1356,7 +1359,7 @@ document.addEventListener("pointercancel", () => { dragging = false; });
 /* ---------- отрисовка ---------- */
 function render() {
   if (S.view === "session" && !S.session) S.view = "list";
-  const key = [S.tab, S.view, S.sheet || "", S.zoom ? "z" : "", S.themeSheet ? "t" : "", S.hedit || "", S.wmenu || "", S.dayKey || "", S.gsheet ? "g" : "", S.gdone || "", S.kvinfo ? "i" : "", S.prevPop ? "p" : "", S.set || "", S.exportSheet ? "x" : "", S.bhf || "", S.wedit || "", S.bedit || "", S.kv, S.kvp ? (S.kvp.sel ? "s" : S.kvp.scan ? "c" : S.kvp.manual ? "m" : "p") : ""].join(":");
+  const key = [S.tab, S.view, S.sheet || "", S.zoom ? "z" : "", S.themeSheet ? "t" : "", S.hedit || "", S.wmenu || "", S.dayKey || "", S.gsheet ? "g" : "", S.gdone || "", S.kvinfo ? "i" : "", S.normSheet ? "n" : "", S.prevPop ? "p" : "", S.set || "", S.exportSheet ? "x" : "", S.bhf || "", S.wedit || "", S.bedit || "", S.kv, S.kvp ? (S.kvp.sel ? "s" : S.kvp.scan ? "c" : S.kvp.manual ? "m" : "p") : ""].join(":");
   const y = key === S.lastKey ? window.scrollY : 0;
   S.lastKey = key;
   let h;
@@ -1377,7 +1380,7 @@ function render() {
 }
 function goBack() {
   if (S.tab === "settings" && S.set !== "home") { S.set = "home"; render(); return; }
-  if (S.tab === "kbzhu") { if (S.kvinfo) { S.kvinfo = false; render(); return; } if (S.kvp) { kvClose(); return; } if (S.gsheet) { S.gsheet = null; render(); return; } if (S.wedit) { S.wedit = null; render(); return; } if (S.gdone) { S.gdone = null; render(); return; } if (S.kv === "biohist") { S.kv = "bio"; render(); return; } if (S.kv !== "home") { S.kv = "home"; S.bedit = null; render(); } return; }
+  if (S.tab === "kbzhu") { if (S.kvinfo) { S.kvinfo = false; render(); return; } if (S.normSheet) { S.normSheet = false; render(); return; } if (S.kvp) { kvClose(); return; } if (S.gsheet) { S.gsheet = null; render(); return; } if (S.wedit) { S.wedit = null; render(); return; } if (S.gdone) { S.gdone = null; render(); return; } if (S.kv === "biohist") { S.kv = "bio"; render(); return; } if (S.kv !== "home") { S.kv = "home"; S.bedit = null; render(); } return; }
   if (S.hedit && !S.zoom) {
     S.hedit = null;
     if (S.hfrom) { S.hfrom = null; S.tab = "diary"; S.view = "day"; }
@@ -1394,7 +1397,7 @@ function goBack() {
   render();
 }
 async function showTab(t) {
-  if (t === "kbzhu" && S.tab === "kbzhu") { S.kv = "home"; S.gsheet = null; S.wedit = null; S.gdone = null; S.bedit = null; S.kvinfo = false; }
+  if (t === "kbzhu" && S.tab === "kbzhu") { S.kv = "home"; S.gsheet = null; S.wedit = null; S.gdone = null; S.bedit = null; S.kvinfo = false; S.normSheet = false; }
   if (typeof stopScan === "function") stopScan(); if (S.kvp) S.kvp = null;
   S.tab = t; S.sheet = null; S.zoom = null; S.themeSheet = false; S.exportSheet = false; S.set = "home"; S.hedit = null;
   try {
@@ -1416,7 +1419,7 @@ document.querySelectorAll(".tabs button").forEach(b => { b.onclick = () => showT
 
 /* ---------- действия ---------- */
 const nextName = () => { const L = "АБВГДЕЖЗИК"; const n = (S.workouts || []).length; return "Тренировка " + (L[n] || n + 1); };
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.2.0";
 ICON.palette = '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/>';
 ICON.bell = '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"/>';
 ICON.download = '<path d="M6 3h8l4 4v14H6zM14 3v4h4M12 10v6M9.5 13.5L12 16l2.5-2.5"/>';
@@ -2119,7 +2122,7 @@ function viewKbzhu() {
       b("tips", "trend", "Советы", "Вес, недельная сводка и рекомендации") +
       b("bio", "body", "Биометрические данные", "Рост, вес, замеры, цель и её прогресс");
   }
-  return h + (S.kvp ? viewPicker() : "") + (S.gsheet ? viewGoalSheet() : "") + (S.wedit ? viewWEdit() : "") + (S.gdone ? viewGDone() : "") + (S.kvinfo ? viewKvInfo() : "");
+  return h + (S.kvp ? viewPicker() : "") + (S.gsheet ? viewGoalSheet() : "") + (S.wedit ? viewWEdit() : "") + (S.gdone ? viewGDone() : "") + (S.kvinfo ? viewKvInfo() : "") + (S.normSheet ? viewNorm() : "");
 }
 
 /* калькулятор: сырое → готовое */
@@ -2167,15 +2170,21 @@ const fmtK = n => Math.round(n).toLocaleString("ru-RU");
 const PLAN = { gain: { f: 1.10, p: 1.8, j: 1.0 }, keep: { f: 1.00, p: 1.6, j: 0.9 }, cut: { f: 0.82, p: 2.3, j: 0.8 } };
 const curGoal = () => (B().goal && B().goal.type) || N().goal || "keep";
 function nutriPlan() {
-  const bw = latestVal("weight"), type = curGoal(), c = PLAN[type] || PLAN.keep, man = N().kcalGoal;
-  if (!(bw > 0)) {
-    if (!(man > 0)) return null;
+  const bw = latestVal("weight"), type = curGoal(), c = PLAN[type] || PLAN.keep, man = N().kcalGoal, cu = N().custom || null;
+  let pl = null;
+  if (bw > 0) {
+    const M = Math.round(33 * bw), auto = Math.round(33 * bw * c.f / 10) * 10, K = man > 0 ? man : auto;
+    const P = Math.round(c.p * bw), F = Math.round(c.j * bw);
+    pl = { k: K, b: P, j: F, u: Math.max(0, Math.round((K - 4 * P - 9 * F) / 4)), type, bw, manual: man > 0, auto, M, c };
+  } else if (man > 0) {
     const P = Math.round(man * 0.25 / 4), F = Math.round(man * 0.27 / 9);
-    return { k: man, b: P, j: F, u: Math.max(0, Math.round((man - 4 * P - 9 * F) / 4)), type, bw: null, manual: true, c };
+    pl = { k: man, b: P, j: F, u: Math.max(0, Math.round((man - 4 * P - 9 * F) / 4)), type, bw: null, manual: true, c };
   }
-  const M = Math.round(33 * bw), auto = Math.round(33 * bw * c.f / 10) * 10, K = man > 0 ? man : auto;
-  const P = Math.round(c.p * bw), F = Math.round(c.j * bw);
-  return { k: K, b: P, j: F, u: Math.max(0, Math.round((K - 4 * P - 9 * F) / 4)), type, bw, manual: man > 0, auto, M, c };
+  if (cu && (cu.b > 0 || cu.j > 0 || cu.u > 0)) {
+    const b = cu.b > 0 ? cu.b : pl ? pl.b : 0, j = cu.j > 0 ? cu.j : pl ? pl.j : 0, u = cu.u > 0 ? cu.u : pl ? pl.u : 0;
+    pl = Object.assign({}, pl || { type, bw: null, c, M: 0, auto: 0 }, { b, j, u, k: Math.round(4 * b + 9 * j + 4 * u), custom: true, manual: false });
+  }
+  return pl;
 }
 const macroGoals = () => nutriPlan();
 function ringSvg(val, goal) {
@@ -2212,6 +2221,19 @@ function viewKvInfo() {
     '<b>5. Норма на день</b> (по твоему весу В и цели):<br>Поддержание M = 33 × В<br>Норма К = M × f, где f = 1,10 (набор), 1,00 (поддержание), 0,82 (сушка)<br>Белки Б = p × В, где p = 1,8 (набор), 1,6 (поддержание), 2,3 (сушка)<br>Жиры Ж = j × В, где j = 1,0 (набор), 0,9 (поддержание), 0,8 (сушка)<br>Углеводы У = (К − 4·Б − 9·Ж) ÷ 4</div></div>' + ex +
     '<div class="sub" style="margin:8px 4px">Ккал на упаковке считаются сложнее (клетчатка, спирты), поэтому могут отличаться от формулы на несколько процентов.</div></div></div>';
 }
+function viewNorm() {
+  const pl = nutriPlan(), cu = N().custom || {}, v = x => (cu[x] > 0 ? String(cu[x]).replace(".", ",") : "");
+  const ph = x => (pl ? String(pl[x]) : "");
+  const k = pl ? pl.k : 0;
+  return '<div class="scrim" data-act="norm-close"></div><div class="sheet" role="dialog" aria-label="Моя норма"><div class="sheet-in"><div class="grab"></div>' +
+    '<div class="sheet-h" style="margin-bottom:8px"><div class="h1">Моя норма БЖУ</div><button class="link" data-act="norm-close">Закрыть</button></div>' +
+    '<div class="sub" style="margin-bottom:10px">Впиши, сколько граммов в день нужно именно тебе. Пустое поле считается по формуле. Калории считаются сами: 4·Б + 9·Ж + 4·У.</div>' +
+    `<div class="row" style="margin-top:0"><div class="stepper"><label class="field-l" for="nm-b">Белки, г</label><input id="nm-b" inputmode="decimal" value="${v("b")}" placeholder="${ph("b")}"></div>` +
+    `<div class="stepper"><label class="field-l" for="nm-j">Жиры, г</label><input id="nm-j" inputmode="decimal" value="${v("j")}" placeholder="${ph("j")}"></div>` +
+    `<div class="stepper"><label class="field-l" for="nm-u">Углеводы, г</label><input id="nm-u" inputmode="decimal" value="${v("u")}" placeholder="${ph("u")}"></div></div>` +
+    `<div id="nm-k" class="readout" style="margin-top:8px">${k ? "Итого " + fmtK(k) + " ккал" : ""}</div>` +
+    '<button class="btn primary" data-act="norm-save">Сохранить</button>' + (N().custom ? '<button class="btn soft" data-act="norm-reset">Сбросить на формулу</button>' : "") + "</div></div>";
+}
 function viewLog() {
   const d = S.kvDay || (S.kvDay = today()), L = dayLog(d), tot = sumM(L), pl = nutriPlan(), g = pl ? pl.k : 0, mg = pl;
   const dt = new Date(d + "T00:00:00");
@@ -2219,7 +2241,7 @@ function viewLog() {
   h += `<div class="dayh" style="margin-bottom:12px">${d === today() ? "Сегодня" : d === addDays(today(), -1) ? "Вчера" : fmtDay(d)}</div>`;
   h += `<div class="ringcard"><div class="rwrap">${ringSvg(tot.k, g)}<div class="rmid"><b>${fmtK(tot.k)}</b><span>${g > 0 ? `из ${fmtK(g)}` : "ккал"}</span>${g > 0 ? "<span>ккал</span>" : ""}</div></div>` +
     `<div class="rbars">${macroBar("Белки", tot.b, mg && mg.b)}${macroBar("Жиры", tot.j, mg && mg.j)}${macroBar("Углеводы", tot.u, mg && mg.u)}</div></div>`;
-  if (pl) h += `<div class="sub" style="margin:-4px 4px 10px">Норма для цели «${GOALS[pl.type]}»${pl.bw ? " · вес " + fmtNum(pl.bw) + " кг" : ""}${pl.manual ? " · своя норма ккал" : ""}. Как считается: «Как считаются КБЖУ».</div>`;
+  h += `<div class="normrow"><div class="sub">${pl ? (pl.custom ? "Твоя норма БЖУ" : "Норма для цели «" + GOALS[pl.type] + "»" + (pl.bw ? " · вес " + fmtNum(pl.bw) + " кг" : "") + (pl.manual ? " · своя норма ккал" : "")) : "Норма не задана"}</div><button class="chipb" data-act="norm-open">Моя норма</button></div>`;
   if (!(g > 0)) h += `<div class="card" style="display:flex;gap:10px;align-items:center"><label class="sub" for="kv-kg" style="flex:1">Запиши свой вес в «Советах» или задай норму ккал, и кольцо и цели по БЖУ заработают</label><input id="kv-kg" inputmode="numeric" placeholder="2800" style="width:96px"></div>`;
   else if (tot.k > g * 1.1) h += `<div class="warn">Норма превышена на ${fmtK(tot.k - g)} ккал.</div>`;
   h += '<div class="sec"><h2>Приёмы пищи</h2></div>';
@@ -2409,7 +2431,7 @@ function viewTips() {
   if (pl) {
     const c = pl.c, G = { gain: "Набор", keep: "Поддержание", cut: "Сушка" }[pl.type];
     h += `<div class="card"><div class="b">Твоя норма: ${fmtK(pl.k)} ккал</div><div class="sub" style="margin-top:4px">Белки ${pl.b} г · Жиры ${pl.j} г · Углеводы ${pl.u} г</div>` +
-      (pl.bw ? `<div class="sub" style="margin-top:8px;line-height:1.6">Вес ${fmtNum(pl.bw)} кг, цель «${G}».<br>Поддержание: 33 × ${fmtNum(pl.bw)} = ${pl.M} ккал.<br>${pl.manual ? "Своя норма: " + fmtK(pl.k) + " ккал." : G + ": " + pl.M + " × " + String(c.f).replace(".", ",") + " ≈ " + pl.auto + " ккал."}<br>Б = ${String(c.p).replace(".", ",")} × ${fmtNum(pl.bw)} = ${pl.b} г<br>Ж = ${String(c.j).replace(".", ",")} × ${fmtNum(pl.bw)} = ${pl.j} г<br>У = (${fmtK(pl.k)} − 4·${pl.b} − 9·${pl.j}) ÷ 4 = ${pl.u} г</div>` : `<div class="sub" style="margin-top:8px">Запиши вес ниже, и норма посчитается по формуле.</div>`) + "</div>";
+      (pl.custom ? `<div class="sub" style="margin-top:8px;line-height:1.6">Норма задана тобой.<br>Ккал = 4·${pl.b} + 9·${pl.j} + 4·${pl.u} = ${fmtK(pl.k)}. Изменить: «Дневник питания» → «Моя норма».</div>` : pl.bw ? `<div class="sub" style="margin-top:8px;line-height:1.6">Вес ${fmtNum(pl.bw)} кг, цель «${G}».<br>Поддержание: 33 × ${fmtNum(pl.bw)} = ${pl.M} ккал.<br>${pl.manual ? "Своя норма: " + fmtK(pl.k) + " ккал." : G + ": " + pl.M + " × " + String(c.f).replace(".", ",") + " ≈ " + pl.auto + " ккал."}<br>Б = ${String(c.p).replace(".", ",")} × ${fmtNum(pl.bw)} = ${pl.b} г<br>Ж = ${String(c.j).replace(".", ",")} × ${fmtNum(pl.bw)} = ${pl.j} г<br>У = (${fmtK(pl.k)} − 4·${pl.b} − 9·${pl.j}) ÷ 4 = ${pl.u} г</div>` : `<div class="sub" style="margin-top:8px">Запиши вес ниже, и норма посчитается по формуле.</div>`) + "</div>";
   } else h += `<div class="warn">Запиши свой вес ниже, и я посчитаю норму калорий и БЖУ под твою цель.</div>`;
   h += `<div class="row"><div class="stepper"><label class="field-l" for="kv-kg">Своя норма ккал (если пусто, считается по формуле)</label><input id="kv-kg" inputmode="numeric" value="${N().kcalGoal || ""}" placeholder="${pl && pl.auto ? pl.auto : "2800"}"></div></div>`;
   h += '<div class="sec"><h2>Мой вес</h2></div>' +
@@ -2562,6 +2584,15 @@ Object.assign(actions, {
   "kv-info-close": () => { S.kvinfo = false; render(); },
   "kv-go": b => { S.kv = b.dataset.to; render(); },
   "kv-pick": b => { kvOpen(b.dataset.ctx, b.dataset.meal); shWarm(); },
+  "norm-open": () => { S.normSheet = true; render(); },
+  "norm-close": () => { S.normSheet = false; render(); },
+  "norm-save": () => {
+    const o = {}, bad = [];
+    for (const x of ["b", "j", "u"]) { const t = (($("#nm-" + x) || {}).value || "").trim(); if (!t) continue; const n = parseNum(t); if (!(n > 0 && n <= 1000)) bad.push(x); else o[x] = Math.round(n * 10) / 10; }
+    if (bad.length) return note("Проверь значения: граммы от 1 до 1000");
+    N().custom = Object.keys(o).length ? o : null; persist(); S.normSheet = false; render();
+  },
+  "norm-reset": () => { N().custom = null; persist(); S.normSheet = false; render(); },
   "meal-t": b => { const o = S.mealOpen || (S.mealOpen = {}); o[b.dataset.m] = !o[b.dataset.m]; render(); },
   "kv-all": () => { S.kvp.all = !S.kvp.all; $("#kv-list").innerHTML = foodPickList(); const b = $("[data-act=kv-all]"); },
   "kv-close": kvClose,
@@ -2692,6 +2723,10 @@ document.addEventListener("keydown", e => {
 document.addEventListener("input", e => {
   const t = e.target;
   if (t.id === "kv-q" && S.kvp) { S.kvp.q = t.value; S.kvp.sh = shSearch(t.value); $("#kv-list").innerHTML = foodPickList(); }
+  else if (/^nm-[bju]$/.test(t.id)) {
+    const pl = nutriPlan() || {}, f = x => { const n = parseNum(($("#nm-" + x) || {}).value || ""); return n > 0 ? n : (N().custom ? 0 : 0) || (pl[x] || 0); };
+    const el = $("#nm-k"); if (el) el.textContent = "Итого " + fmtK(Math.round(4 * f("b") + 9 * f("j") + 4 * f("u"))) + " ккал";
+  }
   else if (/^kv-m[bju]$/.test(t.id) && S.kvp && S.kvp.manual) {
     const b = num("kv-mb") || 0, j = num("kv-mj") || 0, u = num("kv-mu") || 0, h = $("#kv-mh"), k = $("#kv-mk");
     if (b || j || u) { const kc = r1(KC(b, j, u)); if (k) k.value = String(kc).replace(".", ","); if (h) h.textContent = `4·${fmtNum(b)} + 9·${fmtNum(j)} + 4·${fmtNum(u)} = ${fmtNum(kc)} ккал на 100 г`; }
