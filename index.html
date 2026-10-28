@@ -1419,7 +1419,7 @@ document.querySelectorAll(".tabs button").forEach(b => { b.onclick = () => showT
 
 /* ---------- действия ---------- */
 const nextName = () => { const L = "АБВГДЕЖЗИК"; const n = (S.workouts || []).length; return "Тренировка " + (L[n] || n + 1); };
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.2.1";
 ICON.palette = '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/>';
 ICON.bell = '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"/>';
 ICON.download = '<path d="M6 3h8l4 4v14H6zM14 3v4h4M12 10v6M9.5 13.5L12 16l2.5-2.5"/>';
@@ -2164,16 +2164,16 @@ const dayLog = d => N().log.filter(x => x.day === d);
 const fmtK = n => Math.round(n).toLocaleString("ru-RU");
 /* ---- норма на день: одна формула для «Дневника питания» и «Советов» ----
    M  = 33 × вес                       (поддерживающие ккал для тренирующегося, ккал)
-   К  = M × f                          (f: набор 1,10 · поддержание 1,00 · сушка 0,82)
+   К  = M × f                          (f: набор 1,19 · поддержание 1,00 · сушка 0,82)
    Б  = p × вес,  Ж = j × вес          (г; p и j зависят от цели)
    У  = (К − 4·Б − 9·Ж) ÷ 4            (остаток калорий уходит в углеводы) */
-const PLAN = { gain: { f: 1.10, p: 1.8, j: 1.0 }, keep: { f: 1.00, p: 1.6, j: 0.9 }, cut: { f: 0.82, p: 2.3, j: 0.8 } };
+const PLAN = { gain: { f: 1.19, p: 2.1, j: 1.05 }, keep: { f: 1.00, p: 1.9, j: 1.0 }, cut: { f: 0.82, p: 2.3, j: 0.8 } };
 const curGoal = () => (B().goal && B().goal.type) || N().goal || "keep";
 function nutriPlan() {
   const bw = latestVal("weight"), type = curGoal(), c = PLAN[type] || PLAN.keep, man = N().kcalGoal, cu = N().custom || null;
   let pl = null;
   if (bw > 0) {
-    const M = Math.round(33 * bw), auto = Math.round(33 * bw * c.f / 10) * 10, K = man > 0 ? man : auto;
+    const M = Math.round(33 * bw), auto = Math.round(33 * bw * c.f / 5) * 5, K = man > 0 ? man : auto;
     const P = Math.round(c.p * bw), F = Math.round(c.j * bw);
     pl = { k: K, b: P, j: F, u: Math.max(0, Math.round((K - 4 * P - 9 * F) / 4)), type, bw, manual: man > 0, auto, M, c };
   } else if (man > 0) {
@@ -2218,7 +2218,7 @@ function viewKvInfo() {
     '<b>2. Калории.</b> Считаются из белков, жиров и углеводов, поэтому всегда сходятся с ними:<br>Ккал = 4 × Б + 9 × Ж + 4 × У<br><br>' +
     '<b>3. День.</b> Итог за день — сумма всех записей: Σ Б, Σ Ж, Σ У, Σ Ккал.<br><br>' +
     '<b>4. Готовое блюдо.</b> Суммируешь сырые ингредиенты и делишь на вес готового блюда M:<br>на 100 г = Σ ÷ M × 100<br>порция = на 100 г × порция ÷ 100<br><br>' +
-    '<b>5. Норма на день</b> (по твоему весу В и цели):<br>Поддержание M = 33 × В<br>Норма К = M × f, где f = 1,10 (набор), 1,00 (поддержание), 0,82 (сушка)<br>Белки Б = p × В, где p = 1,8 (набор), 1,6 (поддержание), 2,3 (сушка)<br>Жиры Ж = j × В, где j = 1,0 (набор), 0,9 (поддержание), 0,8 (сушка)<br>Углеводы У = (К − 4·Б − 9·Ж) ÷ 4</div></div>' + ex +
+    '<b>5. Норма на день</b> (по твоему весу В и цели):<br>Поддержание M = 33 × В<br>Норма К = M × f, где f = 1,19 (набор), 1,00 (поддержание), 0,82 (сушка)<br>Белки Б = p × В, где p = 2,1 (набор), 1,9 (поддержание), 2,3 (сушка)<br>Жиры Ж = j × В, где j = 1,05 (набор), 1,0 (поддержание), 0,8 (сушка)<br>Углеводы У = (К − 4·Б − 9·Ж) ÷ 4</div></div>' + ex +
     '<div class="sub" style="margin:8px 4px">Ккал на упаковке считаются сложнее (клетчатка, спирты), поэтому могут отличаться от формулы на несколько процентов.</div></div></div>';
 }
 function viewNorm() {
