@@ -385,6 +385,11 @@
   .normrow { display: flex; align-items: center; gap: 8px; margin: -4px 4px 10px; }
   .normrow .sub { flex: 1; min-width: 0; }
   .chipb { flex: none; min-height: 32px; padding: 0 12px; border: 1.5px solid var(--line); border-radius: 999px; background: transparent; color: var(--link); font-weight: 600; font-size: 13px; }
+  .sechd { display: flex; width: 100%; align-items: center; justify-content: space-between; padding: 0; border: 0; background: none; color: inherit; text-align: left; font: inherit; }
+  .sechd h2 { margin: 0; }
+  .prow { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .prow .pick { flex: 1; margin-bottom: 0; }
+  .pdel { flex: none; width: 40px; height: 40px; }
 </style>
 </head>
 <body>
@@ -1419,7 +1424,7 @@ document.querySelectorAll(".tabs button").forEach(b => { b.onclick = () => showT
 
 /* ---------- действия ---------- */
 const nextName = () => { const L = "АБВГДЕЖЗИК"; const n = (S.workouts || []).length; return "Тренировка " + (L[n] || n + 1); };
-const APP_VERSION = "1.2.1";
+const APP_VERSION = "1.3.0";
 ICON.palette = '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/>';
 ICON.bell = '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"/>';
 ICON.download = '<path d="M6 3h8l4 4v14H6zM14 3v4h4M12 10v6M9.5 13.5L12 16l2.5-2.5"/>';
@@ -1791,7 +1796,6 @@ document.addEventListener("input", e => {
 document.addEventListener("change", e => {
   if (e.target.id === "imp-file") { const f = e.target.files && e.target.files[0]; if (f) f.text().then(importText).catch(() => note("Не удалось прочитать файл.")); e.target.value = ""; }
   else if (e.target.id === "pex") { S.sum.exercise = e.target.value; calc(); }
-  else if (e.target.id === "kv-kg") render();
   else if (S.tab === "history" && S.hedit) hChange(e.target);
 });
 
@@ -1805,7 +1809,7 @@ const KC = (b, j, u) => 4 * b + 9 * j + 4 * u;   // ккал = 4·Б + 9·Ж + 4
 const mac = (p, g) => { const b = p.b * g / 100, j = p.j * g / 100, u = p.u * g / 100; return { k: (b || j || u) ? KC(b, j, u) : p.k * g / 100, b, j, u }; };
 function fixNutri() {
   const n = D.nutri; if (!n) return;
-  if (!n.kgMig) { n.kgMig = 1; n.kcalGoal = 0; }
+  if (n.kgMig !== 2) { n.kgMig = 2; n.kcalGoal = 0; }
   for (const p of n.prods || []) if (p.b || p.j || p.u) p.k = r1(KC(p.b || 0, p.j || 0, p.u || 0));
   for (const x of n.log || []) if (x.b || x.j || x.u) x.k = KC(x.b || 0, x.j || 0, x.u || 0);
 }
@@ -2170,7 +2174,7 @@ const fmtK = n => Math.round(n).toLocaleString("ru-RU");
 const PLAN = { gain: { f: 1.19, p: 2.1, j: 1.05 }, keep: { f: 1.00, p: 1.9, j: 1.0 }, cut: { f: 0.82, p: 2.3, j: 0.8 } };
 const curGoal = () => (B().goal && B().goal.type) || N().goal || "keep";
 function nutriPlan() {
-  const bw = latestVal("weight"), type = curGoal(), c = PLAN[type] || PLAN.keep, man = N().kcalGoal, cu = N().custom || null;
+  const bw = latestVal("weight"), type = curGoal(), c = PLAN[type] || PLAN.keep, man = 0, cu = N().custom || null;
   let pl = null;
   if (bw > 0) {
     const M = Math.round(33 * bw), auto = Math.round(33 * bw * c.f / 5) * 5, K = man > 0 ? man : auto;
@@ -2242,7 +2246,7 @@ function viewLog() {
   h += `<div class="ringcard"><div class="rwrap">${ringSvg(tot.k, g)}<div class="rmid"><b>${fmtK(tot.k)}</b><span>${g > 0 ? `из ${fmtK(g)}` : "ккал"}</span>${g > 0 ? "<span>ккал</span>" : ""}</div></div>` +
     `<div class="rbars">${macroBar("Белки", tot.b, mg && mg.b)}${macroBar("Жиры", tot.j, mg && mg.j)}${macroBar("Углеводы", tot.u, mg && mg.u)}</div></div>`;
   h += `<div class="normrow"><div class="sub">${pl ? (pl.custom ? "Твоя норма БЖУ" : "Норма для цели «" + GOALS[pl.type] + "»" + (pl.bw ? " · вес " + fmtNum(pl.bw) + " кг" : "") + (pl.manual ? " · своя норма ккал" : "")) : "Норма не задана"}</div><button class="chipb" data-act="norm-open">Моя норма</button></div>`;
-  if (!(g > 0)) h += `<div class="card" style="display:flex;gap:10px;align-items:center"><label class="sub" for="kv-kg" style="flex:1">Запиши свой вес в «Советах» или задай норму ккал, и кольцо и цели по БЖУ заработают</label><input id="kv-kg" inputmode="numeric" placeholder="2800" style="width:96px"></div>`;
+  if (!(g > 0)) h += '<div class="warn">Запиши свой вес в «Советах» или нажми «Моя норма» и впиши свои граммы БЖУ.</div>';
   else if (tot.k > g * 1.1) h += `<div class="warn">Норма превышена на ${fmtK(tot.k - g)} ккал.</div>`;
   h += '<div class="sec"><h2>Приёмы пищи</h2></div>';
   const autoM = m => (MEALS.some(x => x[0] === m) ? m : "sn");
@@ -2258,9 +2262,9 @@ function viewLog() {
   h += `<button class="btn soft" data-act="kv-info">Как считаются КБЖУ</button>`;
   const rec = recentFoods();
   if (rec.length) {
-    h += '<div class="sec"><h2>Недавние записи</h2></div>' + rec.map((x, i) =>
+    h += `<div class="sec"><button class="sechd" data-act="rec-t" aria-expanded="${!!S.recOpen}"><h2>Недавние записи</h2><span class="chv${S.recOpen ? " up" : ""}">${icon("down", 18)}</span></button></div>` + (S.recOpen ? rec.map((x, i) =>
       `<div class="mitem rec"><div class="g"><div class="n">${esc(x.name)}</div><div class="sub">${Math.round(x.k / x.g * 100)} ккал на 100 г · Б ${r1(x.b / x.g * 100)} · Ж ${r1(x.j / x.g * 100)} · У ${r1(x.u / x.g * 100)}</div></div>` +
-      `<button class="addc" data-act="kv-quick" data-i="${i}" aria-label="Добавить ещё раз: ${esc(x.name)}">${icon("plus", 20)}</button></div>`).join("");
+      `<button class="addc" data-act="kv-quick" data-i="${i}" aria-label="Добавить ещё раз: ${esc(x.name)}">${icon("plus", 20)}</button></div>`).join("") : "");
   }
   return h;
 }
@@ -2270,7 +2274,8 @@ const normQ = t => String(t || "").toLowerCase().replace(/ё/g, "е").replace(/\
 const hitQ = (name, q) => { const n = normQ(name); return q.split(" ").every(w => n.includes(w)); };
 function foodPickList() {
   const q = normQ(S.kvp.q), ps = N().prods.slice().reverse();
-  const row = (p, src, i, tag) => `<button class="pick" data-act="kv-sel" data-src="${src}" data-i="${i}"><span class="g"><span class="b" style="display:block;overflow-wrap:anywhere">${esc(p.name)}</span><span class="sub">на 100 г: ${macTxt(p)}${p.partial ? " · неполные данные" : ""}${tag ? " · " + tag : ""}</span></span></button>`;
+  const rowB = (p, src, i, tag) => `<button class="pick" data-act="kv-sel" data-src="${src}" data-i="${i}"><span class="g"><span class="b" style="display:block;overflow-wrap:anywhere">${esc(p.name)}</span><span class="sub">на 100 г: ${macTxt(p)}${p.partial ? " · неполные данные" : ""}${tag ? " · " + tag : ""}</span></span></button>`;
+  const row = (p, src, i, tag) => src === "l" ? `<div class="prow">${rowB(p, src, i, tag)}<button class="ico pdel" data-act="kv-pdel" data-id="${esc(p.id)}" aria-label="Удалить продукт ${esc(p.name)}">${icon("x", 16)}</button></div>` : rowB(p, src, i, tag);
   let h = "";
   if (!q) {
     if (ps.length) {
@@ -2431,9 +2436,8 @@ function viewTips() {
   if (pl) {
     const c = pl.c, G = { gain: "Набор", keep: "Поддержание", cut: "Сушка" }[pl.type];
     h += `<div class="card"><div class="b">Твоя норма: ${fmtK(pl.k)} ккал</div><div class="sub" style="margin-top:4px">Белки ${pl.b} г · Жиры ${pl.j} г · Углеводы ${pl.u} г</div>` +
-      (pl.custom ? `<div class="sub" style="margin-top:8px;line-height:1.6">Норма задана тобой.<br>Ккал = 4·${pl.b} + 9·${pl.j} + 4·${pl.u} = ${fmtK(pl.k)}. Изменить: «Дневник питания» → «Моя норма».</div>` : pl.bw ? `<div class="sub" style="margin-top:8px;line-height:1.6">Вес ${fmtNum(pl.bw)} кг, цель «${G}».<br>Поддержание: 33 × ${fmtNum(pl.bw)} = ${pl.M} ккал.<br>${pl.manual ? "Своя норма: " + fmtK(pl.k) + " ккал." : G + ": " + pl.M + " × " + String(c.f).replace(".", ",") + " ≈ " + pl.auto + " ккал."}<br>Б = ${String(c.p).replace(".", ",")} × ${fmtNum(pl.bw)} = ${pl.b} г<br>Ж = ${String(c.j).replace(".", ",")} × ${fmtNum(pl.bw)} = ${pl.j} г<br>У = (${fmtK(pl.k)} − 4·${pl.b} − 9·${pl.j}) ÷ 4 = ${pl.u} г</div>` : `<div class="sub" style="margin-top:8px">Запиши вес ниже, и норма посчитается по формуле.</div>`) + "</div>";
-  } else h += `<div class="warn">Запиши свой вес ниже, и я посчитаю норму калорий и БЖУ под твою цель.</div>`;
-  h += `<div class="row"><div class="stepper"><label class="field-l" for="kv-kg">Своя норма ккал (если пусто, считается по формуле)</label><input id="kv-kg" inputmode="numeric" value="${N().kcalGoal || ""}" placeholder="${pl && pl.auto ? pl.auto : "2800"}"></div></div>`;
+      (pl.custom ? `<div class="sub" style="margin-top:8px;line-height:1.6">Норма задана тобой.<br>Ккал = 4·${pl.b} + 9·${pl.j} + 4·${pl.u} = ${fmtK(pl.k)}. </div><button class="chipb" style="margin-top:8px" data-act="norm-open">Изменить мою норму</button>` : pl.bw ? `<div class="sub" style="margin-top:8px;line-height:1.6">Вес ${fmtNum(pl.bw)} кг, цель «${G}».<br>Поддержание: 33 × ${fmtNum(pl.bw)} = ${pl.M} ккал.<br>${pl.manual ? "Своя норма: " + fmtK(pl.k) + " ккал." : G + ": " + pl.M + " × " + String(c.f).replace(".", ",") + " ≈ " + pl.auto + " ккал."}<br>Б = ${String(c.p).replace(".", ",")} × ${fmtNum(pl.bw)} = ${pl.b} г<br>Ж = ${String(c.j).replace(".", ",")} × ${fmtNum(pl.bw)} = ${pl.j} г<br>У = (${fmtK(pl.k)} − 4·${pl.b} − 9·${pl.j}) ÷ 4 = ${pl.u} г</div>` : `<div class="sub" style="margin-top:8px">Запиши вес ниже, и норма посчитается по формуле.</div>`) + "</div>";
+  } else h += `<div class="warn">Запиши свой вес ниже, и я посчитаю норму калорий и БЖУ под твою цель.</div><button class="chipb" data-act="norm-open">Задать свою норму</button>`;
   h += '<div class="sec"><h2>Мой вес</h2></div>' +
     `<div class="row" style="margin-top:0"><div class="stepper" style="flex:1.1"><label class="field-l" for="kv-wd">Дата</label><input id="kv-wd" type="date" value="${today()}" max="${today()}"></div>` +
     `<div class="stepper"><label class="field-l" for="kv-w">Вес, кг</label><input id="kv-w" inputmode="decimal" placeholder="78,4"></div></div>` +
@@ -2593,6 +2597,13 @@ Object.assign(actions, {
     N().custom = Object.keys(o).length ? o : null; persist(); S.normSheet = false; render();
   },
   "norm-reset": () => { N().custom = null; persist(); S.normSheet = false; render(); },
+  "rec-t": () => { S.recOpen = !S.recOpen; render(); },
+  "kv-pdel": async b => {
+    const p = N().prods.find(x => x.id === b.dataset.id); if (!p) return;
+    if (!(await ask("Удалить «" + p.name + "» из списка продуктов? Записи в дневнике останутся."))) return;
+    N().prods = N().prods.filter(x => x.id !== p.id); S.calc.rows = S.calc.rows.filter(r => r.pid !== p.id); persist();
+    const l = $("#kv-list"); if (l) l.innerHTML = foodPickList(); else render();
+  },
   "meal-t": b => { const o = S.mealOpen || (S.mealOpen = {}); o[b.dataset.m] = !o[b.dataset.m]; render(); },
   "kv-all": () => { S.kvp.all = !S.kvp.all; $("#kv-list").innerHTML = foodPickList(); const b = $("[data-act=kv-all]"); },
   "kv-close": kvClose,
