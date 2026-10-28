@@ -390,6 +390,14 @@
   .prow { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
   .prow .pick { flex: 1; margin-bottom: 0; }
   .pdel { flex: none; width: 40px; height: 40px; }
+  .exsearch { position: relative; flex: 1; min-width: 0; }
+  .exsearch input { width: 100%; }
+  .exlist { display: none; position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 25; max-height: 260px; overflow-y: auto; background: var(--card); border: 1.5px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+  .exsearch:focus-within .exlist.has { display: block; }
+  .exitem { display: block; width: 100%; min-height: 44px; padding: 10px 12px; border: 0; border-bottom: 1px solid var(--line); background: none; color: inherit; font: inherit; text-align: left; overflow-wrap: anywhere; }
+  .exitem:last-child { border-bottom: 0; }
+  .fatseg { flex-wrap: wrap; }
+  .fatseg button { flex: 1 1 30%; min-width: 0; padding: 0 4px; font-size: 13px; line-height: 1.1; white-space: normal; }
 </style>
 </head>
 <body>
@@ -456,7 +464,7 @@ async function initStore() {
   try {
     const raw = localStorage.getItem(KEY);
     smLoad(!!raw);
-    if (raw) { const d = JSON.parse(raw); D.workouts = d.workouts || []; D.bodyweight = d.bodyweight || []; D.sessions = d.sessions || []; D.nutri = d.nutri || null; D.settings = d.settings || null; D.seed1 = !!d.seed1; }
+    if (raw) { const d = JSON.parse(raw); D.workouts = d.workouts || []; D.bodyweight = d.bodyweight || []; D.sessions = d.sessions || []; D.nutri = d.nutri || null; D.settings = d.settings || null; D.extra = d.extra || null; D.seed1 = !!d.seed1; }
     localStorage.setItem(KEY + "-t", "1"); localStorage.removeItem(KEY + "-t");
     P.mode = "local";
     try { await Promise.race([syncNow(false), new Promise(r => setTimeout(r, 5000))]); } catch (e) {}
@@ -880,7 +888,8 @@ function viewHub() {
   const n = D.sessions.filter(x => x.finishedAt != null).length;
   return memWarn() + backBar("Прогресс") + '<div class="sec" style="margin-top:6px"><h2>Прогресс</h2></div>' +
     `<button class="wcard" data-act="hub" data-to="history" style="min-height:76px">${icon("history", 26)}<span style="flex:1;min-width:0"><span class="t" style="display:block">История</span><span class="x" style="display:block">Проведённые тренировки, рекорды, правка · ${n}</span></span>${icon("right")}</button>` +
-    `<button class="wcard" data-act="hub" data-to="progress" style="min-height:76px">${icon("trend", 26)}<span style="flex:1;min-width:0"><span class="t" style="display:block">Прогресс и вес</span><span class="x" style="display:block">Графики по упражнениям, вес тела, лучшие результаты</span></span>${icon("right")}</button>`;
+    `<button class="wcard" data-act="hub" data-to="progress" style="min-height:76px">${icon("trend", 26)}<span style="flex:1;min-width:0"><span class="t" style="display:block">Прогресс и вес</span><span class="x" style="display:block">Графики по упражнениям, вес тела, лучшие результаты</span></span>${icon("right")}</button>` +
+    `<button class="wcard" data-act="hub" data-to="coach" style="min-height:76px">${icon("coach", 26)}<span style="flex:1;min-width:0"><span class="t" style="display:block">Тренер</span><span class="x" style="display:block">Когда повысить вес, что отстаёт, когда разгрузиться</span></span>${icon("right")}</button>`;
 }
 function viewList() {
   let h = memWarn() + `<div class="kick" style="margin-left:0">${kickDate()}${weekNav()}</div>` + weekStrip(true) + remBanners();
@@ -1233,8 +1242,7 @@ function viewProgress() {
     METRICS.map(([k, l]) => `<button data-act="metric" data-m="${k}" class="${m.metric === k ? "on" : ""}">${l}</button>`).join("") + `</div>`;
   if (used.length && m.metric !== "weight") {
     h += `<div class="exnav"><button data-act="ex-step" data-d="-1" aria-label="Предыдущее упражнение">${icon("back", 22)}</button>` +
-      `<label class="vh" for="pex">Упражнение</label><div class="selwrap"><select id="pex">` +
-      used.map(c => `<option value="${esc(c.name)}" ${c.name === m.exercise ? "selected" : ""}>${esc(c.name)}</option>`).join("") + `</select>${icon("down", 18)}</div>` +
+      `<label class="vh" for="pex">Упражнение</label><div class="exsearch"><input id="pex" type="text" value="${esc(m.exercise)}" placeholder="Начни писать название" autocomplete="off" aria-label="Упражнение"><div id="pex-list" class="exlist"></div></div>` +
       `<button data-act="ex-step" data-d="1" aria-label="Следующее упражнение">${icon("right", 22)}</button></div>`;
   }
   if (pts.length) {
@@ -1364,7 +1372,7 @@ document.addEventListener("pointercancel", () => { dragging = false; });
 /* ---------- отрисовка ---------- */
 function render() {
   if (S.view === "session" && !S.session) S.view = "list";
-  const key = [S.tab, S.view, S.sheet || "", S.zoom ? "z" : "", S.themeSheet ? "t" : "", S.hedit || "", S.wmenu || "", S.dayKey || "", S.gsheet ? "g" : "", S.gdone || "", S.kvinfo ? "i" : "", S.normSheet ? "n" : "", S.prevPop ? "p" : "", S.set || "", S.exportSheet ? "x" : "", S.bhf || "", S.wedit || "", S.bedit || "", S.kv, S.kvp ? (S.kvp.sel ? "s" : S.kvp.scan ? "c" : S.kvp.manual ? "m" : "p") : ""].join(":");
+  const key = [S.tab, S.view, S.sheet || "", S.zoom ? "z" : "", S.themeSheet ? "t" : "", S.hedit || "", S.wmenu || "", S.dayKey || "", S.gsheet ? "g" : "", S.gdone || "", S.kvinfo ? "i" : "", S.normSheet ? "n" : "", S.eat ? "e" : "", S.prevPop ? "p" : "", S.set || "", S.exportSheet ? "x" : "", S.bhf || "", S.wedit || "", S.bedit || "", S.kv, S.kvp ? (S.kvp.sel ? "s" : S.kvp.scan ? "c" : S.kvp.manual ? "m" : "p") : ""].join(":");
   const y = key === S.lastKey ? window.scrollY : 0;
   S.lastKey = key;
   let h;
@@ -1373,25 +1381,26 @@ function render() {
     if (S.view === "list" && S.sheet) h += viewSheet();
     if (S.view === "list" && S.wmenu) h += viewWMenu();
   } else if (S.tab === "hub") h = viewHub();
+  else if (S.tab === "coach") h = backBar("Тренер") + viewCoach();
   else if (S.tab === "history") h = (S.hedit ? "" : backBar("История")) + viewHistory();
   else if (S.tab === "kbzhu") h = viewKbzhu();
   else if (S.tab === "settings") h = viewSettings();
   else h = backBar("Прогресс и вес") + viewProgress();
   if (S.zoom) h += `<div class="scrim zoom" data-act="unzoom"><img src="${esc(S.zoom)}" alt="Фото упражнения"></div>`;
   app.innerHTML = h;
-  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === (["hub", "history", "progress"].includes(S.tab) ? "diary" : S.tab)));
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === (["hub", "history", "progress", "coach"].includes(S.tab) ? "diary" : S.tab)));
   window.scrollTo(0, y);
   if (S.tab === "progress") drawProgressChart();
 }
 function goBack() {
   if (S.tab === "settings" && S.set !== "home") { S.set = "home"; render(); return; }
-  if (S.tab === "kbzhu") { if (S.kvinfo) { S.kvinfo = false; render(); return; } if (S.normSheet) { S.normSheet = false; render(); return; } if (S.kvp) { kvClose(); return; } if (S.gsheet) { S.gsheet = null; render(); return; } if (S.wedit) { S.wedit = null; render(); return; } if (S.gdone) { S.gdone = null; render(); return; } if (S.kv === "biohist") { S.kv = "bio"; render(); return; } if (S.kv !== "home") { S.kv = "home"; S.bedit = null; render(); } return; }
+  if (S.tab === "kbzhu") { if (S.kvinfo) { S.kvinfo = false; render(); return; } if (S.normSheet) { S.normSheet = false; render(); return; } if (S.eat) { S.eat = false; render(); return; } if (S.kvp) { kvClose(); return; } if (S.gsheet) { S.gsheet = null; render(); return; } if (S.wedit) { S.wedit = null; render(); return; } if (S.gdone) { S.gdone = null; render(); return; } if (S.kv === "biohist") { S.kv = "bio"; render(); return; } if (S.kv !== "home") { S.kv = "home"; S.bedit = null; render(); } return; }
   if (S.hedit && !S.zoom) {
     S.hedit = null;
     if (S.hfrom) { S.hfrom = null; S.tab = "diary"; S.view = "day"; }
     loadHistory().then(render); return;
   }
-  if (S.tab === "history" || S.tab === "progress") { showTab("hub"); return; }
+  if (S.tab === "history" || S.tab === "progress" || S.tab === "coach") { showTab("hub"); return; }
   if (S.tab === "hub") { showTab("diary"); return; }
   if (S.prevPop) S.prevPop = false;
   else if (S.zoom) S.zoom = null;
@@ -1402,7 +1411,7 @@ function goBack() {
   render();
 }
 async function showTab(t) {
-  if (t === "kbzhu" && S.tab === "kbzhu") { S.kv = "home"; S.gsheet = null; S.wedit = null; S.gdone = null; S.bedit = null; S.kvinfo = false; S.normSheet = false; }
+  if (t === "kbzhu" && S.tab === "kbzhu") { S.kv = "home"; S.gsheet = null; S.wedit = null; S.gdone = null; S.bedit = null; S.kvinfo = false; S.normSheet = false; S.eat = false; }
   if (typeof stopScan === "function") stopScan(); if (S.kvp) S.kvp = null;
   S.tab = t; S.sheet = null; S.zoom = null; S.themeSheet = false; S.exportSheet = false; S.set = "home"; S.hedit = null;
   try {
@@ -1424,7 +1433,7 @@ document.querySelectorAll(".tabs button").forEach(b => { b.onclick = () => showT
 
 /* ---------- действия ---------- */
 const nextName = () => { const L = "АБВГДЕЖЗИК"; const n = (S.workouts || []).length; return "Тренировка " + (L[n] || n + 1); };
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "1.4.1";
 ICON.palette = '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/>';
 ICON.bell = '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"/>';
 ICON.download = '<path d="M6 3h8l4 4v14H6zM14 3v4h4M12 10v6M9.5 13.5L12 16l2.5-2.5"/>';
@@ -1443,6 +1452,9 @@ function dueReminders() {
     const last = B().entries.slice().sort(byDayDesc)[0], ago = last ? daysBetween(last.day, t) : 999;
     if (ago >= n.b.every) out.push({ k: "b", text: last ? `Пора внести замеры: последний был ${ago} дн назад.` : "Пора внести первые замеры.", btn: "Внести" });
   }
+  const wd = new Date().getDay(), hm = nowHM();
+  if (((wd === 0 && hm >= "18:00") || (wd === 1 && hm < "14:00")) && dis.rep !== t && (D.sessions.length || N().log.length))
+    out.push({ k: "rep", text: "Готов отчёт за неделю: что получается и что попробовать дальше.", btn: "Открыть" });
   return out;
 }
 function remBanners() {
@@ -1457,11 +1469,18 @@ function viewSettings() {
   if (S.set === "about") return backBar("О приложении") + viewAbout();
   if (S.set === "backup") return backBar("Резервное копирование") + viewBackup();
   if (S.set === "shared") return backBar("Общая база продуктов") + viewShared();
+  if (S.set === "account") return backBar("Аккаунт и облако") + viewAccount();
+  if (S.set === "forecast") return backBar("Прогноз результатов") + viewForecast();
+  if (S.set === "regular") return backBar("Индекс регулярности") + viewRegular();
   let h = memWarn() + '<div class="sec" style="margin-top:6px"><h2>Настройки</h2></div>' +
     '<div class="sgl">Персонализация</div><div class="sgroup">' +
     srow("palette", "Оформление", cur[1], "theme-open") +
     srow("bell", "Уведомления", n.on && (n.w.on || n.b.on) ? "Включены" : "Напоминания о тренировках и замерах", "set-go\" data-to=\"notif") + "</div>" +
+    '<div class="sgl">Анализ</div><div class="sgroup">' +
+    srow("trend", "Прогноз результатов", "Динамика и сценарии на 8 недель", "set-go\" data-to=\"forecast") +
+    srow("check", "Индекс регулярности", "Выполнение своего плана: " + rgWeek().idx + "% за 7 дней", "set-go\" data-to=\"regular") + "</div>" +
     '<div class="sgl">Данные и приложение</div><div class="sgroup">' +
+    srow("users", "Аккаунт и облако", FBA ? esc(FBA.email) : fbReady() ? "Войти или создать аккаунт" : "Данные на всех устройствах", "set-go\" data-to=\"account") +
     srow("cloud", "Резервное копирование", syncOn() ? (GH ? "GitHub" : "Облако Telegram") + (SM.err ? " · ошибка" : SM.dirty ? " · ждёт отправки" : " · синхронизировано") : "Не включено: облако и файл", "set-go\" data-to=\"backup") +
     srow("users", "Общая база продуктов", sharedOn() ? "Подключена" : "Продукты, которыми делятся все", "set-go\" data-to=\"shared") +
     srow("download", "Экспорт данных", "Сохранить копию всех данных", "export-open") +
@@ -1499,7 +1518,7 @@ function viewExport() {
 function viewAbout() {
   const sz = (() => { try { return Math.round((localStorage.getItem(KEY) || "").length / 1024); } catch (e) { return 0; } })();
   return '<div class="card" style="text-align:center;padding:22px"><div style="color:var(--accent);display:flex;justify-content:center">' + icon("trophy", 40) + '</div><div class="h1" style="margin-top:8px">Дневник тренировок</div><div class="sub">Версия ' + APP_VERSION + "</div></div>" +
-    '<div class="sgroup"><div class="srow flat"><span class="g"><b>Где хранятся данные</b><small>На этом устройстве и в облаке Telegram (если приложение открыто в Telegram, см. «Резервное копирование»). Фото упражнений хранятся только на устройстве.</small></span></div>' +
+    '<div class="sgroup"><div class="srow flat"><span class="g"><b>Где хранятся данные</b><small>На этом устройстве и, если ты вошёл в аккаунт, в облаке (см. «Аккаунт и облако»). Также доступны облако Telegram и GitHub в «Резервном копировании». Фото упражнений хранятся только на устройстве.</small></span></div>' +
     `<div class="srow flat"><span class="g"><b>Занято</b><small>около ${sz} КБ</small></span></div></div>` +
     '<div class="sub" style="margin:12px 4px">Тренировки, история, прогресс, питание (КБЖУ) и биометрия в одном приложении.</div>';
 }
@@ -1557,7 +1576,7 @@ const actions = {
   "n-day": b => { const d = +b.dataset.d, a = NT().w.days, i = a.indexOf(d); if (i >= 0) a.splice(i, 1); else a.push(d); persist(); render(); },
   "n-every": b => { NT().b.every = +b.dataset.e; persist(); render(); },
   "rem-x": b => { SETD().dis[b.dataset.k] = today(); persist(); render(); },
-  "rem-go": b => { SETD().dis[b.dataset.k] = today(); persist(); S.tab = "kbzhu"; S.kv = "bio"; render(); },
+  "rem-go": b => { SETD().dis[b.dataset.k] = today(); persist(); if (b.dataset.k === "rep") { S.tab = "settings"; S.set = "regular"; } else { S.tab = "kbzhu"; S.kv = "bio"; } render(); },
   day: async b => { S.dayKey = b.dataset.day; S.view = "day"; try { await loadHistory(); } catch (e) {} render(); },
   "wk-prev": () => { S.weekOff++; render(); },
   "wk-next": () => { if (S.weekOff > 0) S.weekOff--; render(); },
@@ -1795,7 +1814,7 @@ document.addEventListener("input", e => {
 });
 document.addEventListener("change", e => {
   if (e.target.id === "imp-file") { const f = e.target.files && e.target.files[0]; if (f) f.text().then(importText).catch(() => note("Не удалось прочитать файл.")); e.target.value = ""; }
-  else if (e.target.id === "pex") { S.sum.exercise = e.target.value; calc(); }
+  else if (e.target.id === "pex") { const nm = pexNames().find(n => normQ(n) === normQ(e.target.value)); if (nm && nm !== S.sum.exercise) { S.sum.exercise = nm; calc(); } else e.target.value = S.sum.exercise; }
   else if (S.tab === "history" && S.hedit) hChange(e.target);
 });
 
@@ -1994,9 +2013,9 @@ async function lookup(code) {
 }
 
 /* ---- общая база продуктов (Firebase Realtime Database, REST) ---- */
-const SHARED_URL = "";   // адрес базы можно вписать сюда: тогда она включена у всех, кто открывает приложение
+const SHARED_URL = "https://app-gym-6ca6e-default-rtdb.europe-west1.firebasedatabase.app";   // адрес базы можно вписать сюда: тогда она включена у всех, кто открывает приложение
 const sharedBase = () => {
-  const u = (((D.settings || {}).sharedUrl) || SHARED_URL || "").trim().replace(/\/+$/, "");
+  const u = ((FBC && FBC.db) || ((D.settings || {}).sharedUrl) || SHARED_URL || "").trim().replace(/\/+$/, "");
   return /^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.(firebaseio\.com|firebasedatabase\.app)$/i.test(u) ? u : "";
 };
 const sharedOn = () => !!sharedBase() && !((D.settings || {}).sharedOff);
@@ -2038,16 +2057,23 @@ async function shPush(p) {
   const url = `${sharedBase()}/foods/${shKey(p)}.json`;
   try {
     if (await fetchJson(url, 10000)) return;   // уже есть: чужие записи не перезаписываем
-    await fetch(url, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ n: p.name, k: p.k, b: p.b, j: p.j, u: p.u, c: p.code || "", t: Date.now() }) });
+    const tok = FBA ? await fbToken().catch(() => null) : null;
+    await fetch(url + (tok ? "?auth=" + encodeURIComponent(tok) : ""), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ n: p.name, k: p.k, b: p.b, j: p.j, u: p.u, c: p.code || "", t: Date.now() }) });
     shAt = 0;
   } catch (e) {}
 }
 const SH_RULES = `{
   "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
     "foods": {
       ".read": true,
       "$id": {
-        ".write": "!data.exists() && newData.exists()",
+        ".write": "auth != null && !data.exists() && newData.exists()",
         ".validate": "newData.hasChildren(['n','k','b','j','u'])",
         "n": { ".validate": "newData.isString() && newData.val().length > 1 && newData.val().length < 80" },
         "k": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 900" },
@@ -2126,7 +2152,7 @@ function viewKbzhu() {
       b("tips", "trend", "Советы", "Вес, недельная сводка и рекомендации") +
       b("bio", "body", "Биометрические данные", "Рост, вес, замеры, цель и её прогресс");
   }
-  return h + (S.kvp ? viewPicker() : "") + (S.gsheet ? viewGoalSheet() : "") + (S.wedit ? viewWEdit() : "") + (S.gdone ? viewGDone() : "") + (S.kvinfo ? viewKvInfo() : "") + (S.normSheet ? viewNorm() : "");
+  return h + (S.kvp ? viewPicker() : "") + (S.gsheet ? viewGoalSheet() : "") + (S.wedit ? viewWEdit() : "") + (S.gdone ? viewGDone() : "") + (S.kvinfo ? viewKvInfo() : "") + (S.normSheet ? viewNorm() : "") + (S.eat ? viewEat() : "");
 }
 
 /* калькулятор: сырое → готовое */
@@ -2266,6 +2292,7 @@ function viewLog() {
       `<div class="mitem rec"><div class="g"><div class="n">${esc(x.name)}</div><div class="sub">${Math.round(x.k / x.g * 100)} ккал на 100 г · Б ${r1(x.b / x.g * 100)} · Ж ${r1(x.j / x.g * 100)} · У ${r1(x.u / x.g * 100)}</div></div>` +
       `<button class="addc" data-act="kv-quick" data-i="${i}" aria-label="Добавить ещё раз: ${esc(x.name)}">${icon("plus", 20)}</button></div>`).join("") : "");
   }
+  h += `<button class="btn soft" data-act="eat-open">Что мне съесть, чтобы добрать КБЖУ?</button>`;
   return h;
 }
 
@@ -2275,7 +2302,7 @@ const hitQ = (name, q) => { const n = normQ(name); return q.split(" ").every(w =
 function foodPickList() {
   const q = normQ(S.kvp.q), ps = N().prods.slice().reverse();
   const rowB = (p, src, i, tag) => `<button class="pick" data-act="kv-sel" data-src="${src}" data-i="${i}"><span class="g"><span class="b" style="display:block;overflow-wrap:anywhere">${esc(p.name)}</span><span class="sub">на 100 г: ${macTxt(p)}${p.partial ? " · неполные данные" : ""}${tag ? " · " + tag : ""}</span></span></button>`;
-  const row = (p, src, i, tag) => src === "l" ? `<div class="prow">${rowB(p, src, i, tag)}<button class="ico pdel" data-act="kv-pdel" data-id="${esc(p.id)}" aria-label="Удалить продукт ${esc(p.name)}">${icon("x", 16)}</button></div>` : rowB(p, src, i, tag);
+  const row = (p, src, i, tag) => src === "l" ? `<div class="prow">${rowB(p, src, i, tag)}<button class="ico pdel" data-act="kv-pmenu" data-id="${esc(p.id)}" aria-label="Действия с продуктом ${esc(p.name)}">${icon("dots", 18)}</button></div>` : rowB(p, src, i, tag);
   let h = "";
   if (!q) {
     if (ps.length) {
@@ -2305,7 +2332,7 @@ function viewPicker() {
     h += head("Сканирование") + '<div class="scanbox"><video id="kv-vid" playsinline muted></video><div class="scanframe"></div><button id="kv-torch" class="scantorch" data-act="kv-torch" hidden>Фонарик</button></div><div class="sub" style="margin-top:8px">Поставь штрихкод в рамку, держи телефон ровно примерно в 15–20 см. При плохом свете включи фонарик.</div><button class="btn plain" data-act="kv-scan-stop">Отмена</button>';
   } else if (k.manual) {
     const dr = k.draft || {}, val = x => (dr[x] != null && dr[x] !== 0 ? esc(String(dr[x]).replace(".", ",")) : "");
-    h += head("Свой продукт (на 100 г)") + `<label class="field-l" for="kv-mn">Название</label><input id="kv-mn" placeholder="Название" value="${esc(dr.name || "")}">` +
+    h += head(dr.editId ? "Изменить продукт (на 100 г)" : "Свой продукт (на 100 г)") + `<label class="field-l" for="kv-mn">Название</label><input id="kv-mn" placeholder="Название" value="${esc(dr.name || "")}">` +
       `<div class="row"><div class="stepper"><label class="field-l" for="kv-mk">Ккал (считаются сами)</label><input id="kv-mk" inputmode="decimal" value="${val("k")}"></div><div class="stepper"><label class="field-l" for="kv-mb">Белки</label><input id="kv-mb" inputmode="decimal" value="${val("b")}"></div></div>` +
       `<div class="row"><div class="stepper"><label class="field-l" for="kv-mj">Жиры</label><input id="kv-mj" inputmode="decimal" value="${val("j")}"></div><div class="stepper"><label class="field-l" for="kv-mu">Углеводы</label><input id="kv-mu" inputmode="decimal" value="${val("u")}"></div></div>` +
       `<div id="kv-mh" class="sub" style="margin-top:8px">Ккал = 4·Б + 9·Ж + 4·У. Заполни белки, жиры и углеводы на 100 г.</div>` +
@@ -2318,7 +2345,10 @@ function viewPicker() {
       (k.msg ? `<div class="warn" style="margin-top:10px">${esc(k.msg)}</div>` : "") +
       `<div id="kv-list" style="margin-top:10px">${foodPickList()}</div><button class="btn outline" data-act="kv-manual">Добавить свой продукт</button>`;
   }
-  return h + "</div></div>";
+  h += "</div></div>";
+  const pm = k.pm && N().prods.find(x => x.id === k.pm);
+  if (pm) h += `<div class="scrim" style="z-index:39" data-act="kv-pm-close"></div><div class="pp" role="dialog" aria-label="Действия с продуктом"><div class="pp-h"><div><b>${esc(pm.name)}</b><small>на 100 г: ${macTxt(pm)}</small></div><button class="ico" data-act="kv-pm-close" aria-label="Закрыть">${icon("x", 16)}</button></div><button class="btn soft" data-act="kv-pm-edit">Изменить</button><button class="btn danger" data-act="kv-pm-del" data-id="${esc(pm.id)}">Удалить</button></div>`;
+  return h;
 }
 
 /* ---- Советы ---- */
@@ -2639,6 +2669,8 @@ Object.assign(actions, {
     const name = cleanTitle(($("#kv-mn") || {}).value || ""), v = ["k", "b", "j", "u"].map(x => num("kv-m" + x) || 0);
     if (!name || !(v[0] || v[1] || v[2] || v[3])) return note("Укажи название и хотя бы БЖУ или калории");
     if (v[1] || v[2] || v[3]) v[0] = r1(KC(v[1], v[2], v[3]));
+    const ed = S.kvp.draft && S.kvp.draft.editId && N().prods.find(x => x.id === S.kvp.draft.editId);
+    if (ed) { ed.name = name; ed.k = v[0]; ed.b = v[1]; ed.j = v[2]; ed.u = v[3]; persist(); S.kvp.manual = false; S.kvp.draft = null; S.kvp.msg = ""; return render(); }
     const np = keepProd({ name, k: v[0], b: v[1], j: v[2], u: v[3], code: (S.kvp.draft && S.kvp.draft.code) || S.kvp.code || "" }, true);
     shPush(np); S.kvp.sel = np; S.kvp.manual = false; S.kvp.draft = null; render();
   },
@@ -2757,7 +2789,7 @@ const TGW = (() => { try { const w = window.Telegram && Telegram.WebApp; return 
 const GH_KEY = "gym-gh-v1", GH_DESC = "gym-diary-sync", GH_FILE = "gym-diary.json";
 let GH = null; try { const v = JSON.parse(localStorage.getItem(GH_KEY) || "null"); if (v && v.token) GH = v; } catch (e) {}
 const ghSave = () => { try { if (GH) localStorage.setItem(GH_KEY, JSON.stringify(GH)); else localStorage.removeItem(GH_KEY); } catch (e) {} };
-const syncOn = () => !!(GH || TGW);
+const syncOn = () => !!(FBA || GH || TGW);
 async function ghApi(path, opt = {}) {
   const ac = new AbortController(), t = setTimeout(() => ac.abort(), 20000);
   try {
@@ -2828,9 +2860,11 @@ async function unpackStr(b64, z) {
 }
 const CHUNK = 3800;
 async function cloudMeta() {
+  if (FBA) { fbLast = await fbGetDoc(); return fbLast ? { rev: fbLast.rev, n: 1, z: fbLast.z } : null; }
   if (GH) { ghLast = await ghGet(); return ghLast ? { rev: ghLast.rev, n: 1, z: ghLast.z } : null; }
   const v = await csCall("getItem", "gd_meta"); if (!v) return null; try { const m = JSON.parse(v); return m && typeof m.rev === "number" && m.n >= 0 ? m : null; } catch (e) { return null; } }
 async function cloudRead() {
+  if (FBA) { const o = fbLast || await fbGetDoc(); if (!o) return null; return { meta: { rev: o.rev, n: 1, z: o.z }, data: JSON.parse(await unpackStr(o.b64, o.z)) }; }
   if (GH) { const o = ghLast || await ghGet(); if (!o) return null; return { meta: { rev: o.rev, n: 1, z: o.z }, data: JSON.parse(await unpackStr(o.b64, o.z)) }; }
   const m = await cloudMeta(); if (!m) return null;
   const keys = Array.from({ length: m.n }, (_, i) => "gd_" + i);
@@ -2841,6 +2875,12 @@ async function cloudRead() {
 async function cloudWrite(prevN) {
   const e0 = editCount, json = JSON.stringify(D, (k, v) => k === "photo" ? null : v);
   const { z, b64 } = await packStr(json), n = Math.ceil(b64.length / CHUNK);
+  if (FBA) {
+    const rev = Math.max(Date.now(), (SM.rev || 0) + 1);
+    await fbDb("PUT", `users/${FBA.uid}/doc`, { v: 1, rev, z, b64, len: json.length, at: Date.now() });
+    fbLast = null;
+    return { rev, clean: e0 === editCount };
+  }
   if (GH) {
     const rev = Math.max(Date.now(), (SM.rev || 0) + 1);
     const body = JSON.stringify({ description: GH_DESC, public: false, files: { [GH_FILE]: { content: JSON.stringify({ v: 1, rev, z, b64 }) } } });
@@ -2866,7 +2906,7 @@ function adopt(doc) {
   const pm = photoMap();
   try { const cur = localStorage.getItem(KEY); if (cur) localStorage.setItem(KEY + "-prev", cur); } catch (e) {}
   D.workouts = doc.workouts || []; D.bodyweight = doc.bodyweight || []; D.sessions = doc.sessions || [];
-  D.nutri = doc.nutri || null; D.settings = doc.settings || null; D.seed1 = !!doc.seed1;
+  D.nutri = doc.nutri || null; D.settings = doc.settings || null; D.extra = doc.extra || null; D.seed1 = !!doc.seed1;
   for (const w of D.workouts) for (const e of w.exercises) if (!e.photo && pm[e.name]) e.photo = pm[e.name];
   for (const s of D.sessions) for (const e of s.exercises) if (!e.photo && pm[e.name]) e.photo = pm[e.name];
   localSave();
@@ -2893,6 +2933,7 @@ function mergeDocs(L, C) {
     n.bio = Object.assign({}, cb, lb, { entries: un(lb.entries, cb.entries, "id"), done: un(lb.done, cb.done, "id"), goal: lb.goal || cb.goal || null });
   } else if (!ln && cn) M.nutri = cn;
   M.settings = L.settings || C.settings || null;
+  { const a = L.extra || {}, c = C.extra || {}; M.extra = { fat: un(a.fat, c.fat, "day"), sleep: Object.assign({}, c.sleep || {}, a.sleep || {}), habits: un(a.habits, c.habits, "id"), hdone: Object.assign({}, c.hdone || {}, a.hdone || {}) }; }
   M.seed1 = !!(L.seed1 || C.seed1);
   return M;
 }
@@ -2954,7 +2995,7 @@ function viewBackup() {
   const tg = window.Telegram && Telegram.WebApp, inTg = !!(tg && tg.initData);
   let h = "";
   if (syncOn()) {
-    h += '<div class="sgroup"><div class="srow flat"><span class="si">' + icon("cloud", 22) + '</span><span class="g"><b>Синхронизация включена: ' + (GH ? "GitHub" : "облако Telegram") + '</b><small>Последняя: ' + fmtSyncAt(SM.at) + (SM.dirty ? " · есть неотправленные изменения" : "") + "</small></span></div>" +
+    h += '<div class="sgroup"><div class="srow flat"><span class="si">' + icon("cloud", 22) + '</span><span class="g"><b>Синхронизация включена: ' + backendName() + '</b><small>Последняя: ' + fmtSyncAt(SM.at) + (SM.dirty ? " · есть неотправленные изменения" : "") + "</small></span></div>" +
       (SM.err ? '<div class="srow flat"><span class="g"><b>Ошибка</b><small>' + esc(SM.err) + "</small></span></div>" : "") + "</div>" +
       '<button class="btn primary" data-act="sync-now">Синхронизировать сейчас</button>' +
       '<div class="sub" style="margin:10px 4px">Изменения уходят в облако через несколько секунд, а при открытии приложения подтягиваются оттуда. ' + (GH ? "На другом устройстве подключи тот же токен GitHub." : "На другом устройстве открой этого же бота под тем же аккаунтом Telegram.") + '</div>' +
@@ -2983,6 +3024,486 @@ function viewBackup() {
     '<div class="sub" style="margin:12px 4px">Что хранится в копии: тренировки, история, питание, замеры, цели и настройки. Фото упражнений остаются только на устройстве, где они добавлены.</div>';
   return h;
 }
+
+/* ====================================================================
+   Дополнения: аккаунт и облако, тренер, подбор еды, прогноз, регулярность
+   ==================================================================== */
+const X = () => {
+  const x = D.extra || (D.extra = {});
+  x.fat = x.fat || []; x.sleep = x.sleep || {}; x.habits = x.habits || []; x.hdone = x.hdone || {};
+  return x;
+};
+const pctTxt = v => (v > 0 ? "+" : v < 0 ? "−" : "") + String(Math.abs(Math.round(v * 10) / 10)).replace(".", ",") + "%";
+const kgTxt = v => (v > 0 ? "+" : v < 0 ? "−" : "") + String(Math.abs(Math.round(v * 10) / 10)).replace(".", ",") + " кг";
+const wkFmt = n => String(Math.round(n * 10) / 10).replace(".", ",");
+const e1 = (w, r) => (w > 0 ? w * (1 + r / 30) : r);
+
+/* ---------------- аккаунт (Firebase: почта и пароль) ---------------- */
+const FB_API_KEY = "AIzaSyBSyTXZt3-yNyzce6uZceKm8eJEPEUlG0k";   // Web API key проекта Firebase; можно вписать сюда, тогда вводить его не нужно
+const FBC_KEY = "gym-fbcfg-v1", FBA_KEY = "gym-fba-v1";
+let FBC = {}; try { FBC = JSON.parse(localStorage.getItem(FBC_KEY) || "{}") || {}; } catch (e) {}
+let FBA = null; try { const v = JSON.parse(localStorage.getItem(FBA_KEY) || "null"); if (v && v.refresh && v.uid) FBA = v; } catch (e) {}
+const fbKey = () => FB_API_KEY || FBC.key || "";
+const fbReady = () => !!(fbKey() && sharedBase());
+const fbSaveA = () => { try { if (FBA) localStorage.setItem(FBA_KEY, JSON.stringify(FBA)); else localStorage.removeItem(FBA_KEY); } catch (e) {} };
+const fbSaveC = () => { try { localStorage.setItem(FBC_KEY, JSON.stringify(FBC)); } catch (e) {} };
+const backendName = () => (FBA ? "аккаунт" : GH ? "GitHub" : "облако Telegram");
+const FB_ERR = {
+  EMAIL_EXISTS: "Эта почта уже зарегистрирована. Нажми «Войти».",
+  EMAIL_NOT_FOUND: "Такой почты нет. Нажми «Создать аккаунт».",
+  INVALID_PASSWORD: "Неверный пароль.", INVALID_LOGIN_CREDENTIALS: "Неверная почта или пароль.",
+  WEAK_PASSWORD: "Пароль слишком простой: нужно минимум 6 символов.", INVALID_EMAIL: "Проверь почту.",
+  MISSING_PASSWORD: "Введи пароль.", USER_DISABLED: "Этот аккаунт отключён.",
+  TOO_MANY_ATTEMPTS_TRY_LATER: "Слишком много попыток. Подожди немного и повтори.",
+  OPERATION_NOT_ALLOWED: "В Firebase не включён вход по почте и паролю (Authentication → Sign-in method → Email/Password).",
+  API_KEY_INVALID: "Неверный Web API key. Проверь ключ в настройках проекта Firebase.",
+  CONFIGURATION_NOT_FOUND: "В проекте Firebase не включена Authentication. Открой раздел Authentication и нажми «Get started»."
+};
+function fbMsg(m, st) {
+  const c = String(m || "").split(/[\s:]/)[0];
+  return FB_ERR[c] || (st === 401 || st === 403 ? "Нет доступа к базе. Проверь правила (Rules) и что вход по почте включён." : "Ошибка сервера" + (m ? " (" + m + ")" : ""));
+}
+async function fbHttp(url, opt, ms = 20000) {
+  const ac = new AbortController(), t = setTimeout(() => ac.abort(), ms);
+  try {
+    const r = await fetch(url, Object.assign({}, opt, { signal: ac.signal }));
+    let j = null; try { j = await r.json(); } catch (e) {}
+    if (!r.ok) {
+      const m = j && j.error ? (typeof j.error === "string" ? j.error : j.error.message || "") : "";
+      const e = new Error(fbMsg(m, r.status)); e.status = r.status; throw e;
+    }
+    return j;
+  } catch (e) {
+    if (e.name === "AbortError") throw new Error("Сервер не ответил вовремя");
+    if (e instanceof TypeError) throw new Error("Нет связи с сервером");
+    throw e;
+  } finally { clearTimeout(t); }
+}
+async function fbAuth(kind, email, pass) {
+  const j = await fbHttp(`https://identitytoolkit.googleapis.com/v1/accounts:${kind}?key=${encodeURIComponent(fbKey())}`,
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password: pass, returnSecureToken: true }) });
+  FBA = { email: j.email || email, uid: j.localId, refresh: j.refreshToken, id: j.idToken, exp: Date.now() + (parseInt(j.expiresIn, 10) || 3600) * 1000 - 60000 };
+  fbSaveA();
+}
+async function fbToken() {
+  if (!FBA) throw new Error("Нужно войти в аккаунт");
+  if (FBA.id && Date.now() < FBA.exp) return FBA.id;
+  let j;
+  try {
+    j = await fbHttp(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(fbKey())}`,
+      { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: "grant_type=refresh_token&refresh_token=" + encodeURIComponent(FBA.refresh) });
+  } catch (e) {
+    if (e.status === 400) { FBA = null; fbSaveA(); throw new Error("Сессия истекла. Войди в аккаунт заново."); }
+    throw e;
+  }
+  FBA.id = j.id_token; FBA.refresh = j.refresh_token || FBA.refresh; FBA.exp = Date.now() + (parseInt(j.expires_in, 10) || 3600) * 1000 - 60000; fbSaveA();
+  return FBA.id;
+}
+async function fbDb(method, path, body) {
+  const base = sharedBase(); if (!base) throw new Error("Не задан адрес базы Firebase");
+  const tok = await fbToken();
+  return fbHttp(`${base}/${path}.json?auth=${encodeURIComponent(tok)}`, { method, headers: { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+}
+let fbLast = null;
+async function fbGetDoc() { const o = await fbDb("GET", `users/${FBA.uid}/doc`); return o && typeof o.rev === "number" && o.b64 ? o : null; }
+function resetLocal() {
+  D.workouts = []; D.sessions = []; D.bodyweight = []; D.nutri = null; D.settings = null; D.extra = null; D.seed1 = false; localSave();
+}
+async function fbEnter(kind) {
+  const email = (($("#fb-email") || {}).value || "").trim(), pass = ($("#fb-pass") || {}).value || "";
+  if (!/^\S+@\S+\.\S+$/.test(email)) return note("Проверь почту.");
+  if (pass.length < 6) return note("Пароль: минимум 6 символов.");
+  try { await fbAuth(kind, email, pass); } catch (e) { return note(e.message); }
+  SM.rev = 0; SM.dirty = true; smSave();
+  const hasLocal = D.sessions.length || D.bodyweight.length || (D.nutri && (D.nutri.log || []).length);
+  if (kind === "signInWithPassword" && hasLocal && !(await ask("На этом устройстве уже есть данные. Объединить их с аккаунтом? Если нажмёшь «Отмена», устройство очистится и загрузит данные аккаунта."))) { resetLocal(); SM.dirty = false; smSave(); }
+  render(); await syncNow(true);
+}
+function viewAccount() {
+  let h = "";
+  if (!fbReady()) {
+    h += '<div class="card"><div class="b">Подключить облако для всех</div><div class="sub" style="margin-top:6px;line-height:1.55">Данные каждого человека хранятся в его личном аккаунте и доступны с любого устройства: телефона, компьютера, из Telegram и из браузера. Облако нужно создать один раз, оно бесплатное.</div>' +
+      '<ol class="sub" style="margin:8px 0 0;padding-left:20px;line-height:1.55"><li>Открой console.firebase.google.com, войди через Google и создай проект.</li><li>Build → Authentication → Get started → Sign-in method → Email/Password → Enable.</li><li>Build → Realtime Database → Create database (режим «locked»). На вкладке Rules вставь правила (кнопка ниже) и нажми Publish.</li><li>Project settings (шестерёнка) → General → Web API Key: скопируй ключ.</li><li>Адрес базы: вкладка Data в Realtime Database, вид https://…firebaseio.com.</li></ol>' +
+      '<button class="btn soft" data-act="sh-rules">Скопировать правила</button>' +
+      '<label class="field-l" for="fb-url">Адрес базы</label><input id="fb-url" placeholder="https://…firebaseio.com" autocomplete="off" value="' + esc(sharedBase()) + '">' +
+      '<label class="field-l" for="fb-key">Web API key</label><input id="fb-key" placeholder="AIza…" autocomplete="off" value="' + esc(fbKey()) + '">' +
+      '<button class="btn primary" data-act="fb-cfg">Сохранить</button></div>' +
+      '<div class="sub" style="margin:8px 4px">Чтобы облако сразу работало у всех, кто открывает приложение, пришли мне адрес и ключ: я вставлю их в код.</div>';
+    return h;
+  }
+  if (!FBA) {
+    h += '<div class="card"><div class="b">Вход в аккаунт</div><div class="sub" style="margin-top:6px">Войди или создай аккаунт: почта и пароль. Тренировки, питание, замеры и настройки сохраняются в облаке и появятся на других твоих устройствах.</div>' +
+      '<label class="field-l" for="fb-email">Почта</label><input id="fb-email" type="email" inputmode="email" autocomplete="email" placeholder="name@example.com">' +
+      '<label class="field-l" for="fb-pass">Пароль</label><input id="fb-pass" type="password" autocomplete="current-password" placeholder="Минимум 6 символов">' +
+      '<button class="btn primary" data-act="fb-in">Войти</button><button class="btn soft" data-act="fb-reg">Создать аккаунт</button>' +
+      '<button class="link" style="margin-top:6px" data-act="fb-reset">Забыл пароль</button></div>' +
+      '<div class="sgl">Подключение</div><div class="sgroup"><div class="srow flat"><span class="g"><b>' + esc(sharedBase().replace("https://", "")) + '</b><small>Облако настроено</small></span></div>' +
+      (FB_API_KEY && SHARED_URL ? "" : '<button class="srow" data-act="fb-cfg-reset"><span class="g"><b>Изменить настройки облака</b><small>Адрес базы и ключ</small></span>' + icon("right", 18) + "</button>") + "</div>";
+    return h;
+  }
+  h += '<div class="sgroup"><div class="srow flat"><span class="si">' + icon("users", 22) + '</span><span class="g"><b>' + esc(FBA.email) + "</b><small>Последняя синхронизация: " + fmtSyncAt(SM.at) + (SM.dirty ? " · есть несохранённые изменения" : "") + "</small></span></div>" +
+    (SM.err ? '<div class="srow flat"><span class="g"><b>Ошибка</b><small>' + esc(SM.err) + "</small></span></div>" : "") + "</div>" +
+    '<button class="btn primary" data-act="sync-now">Синхронизировать сейчас</button>' +
+    '<div class="sub" style="margin:10px 4px">Изменения уходят в облако через несколько секунд после правки и подгружаются при открытии приложения. Войди в этот же аккаунт на другом устройстве, и данные будут там.</div>' +
+    '<button class="btn danger" data-act="fb-out">Выйти из аккаунта</button>';
+  return h;
+}
+
+/* ---------------- тренер ---------------- */
+function exSessions(name) {
+  return D.sessions.filter(s => s.finishedAt != null && s.sets.some(x => x.exercise === name && x.reps > 0)).sort(byStart).map(s => {
+    const ss = s.sets.filter(x => x.exercise === name && x.reps > 0), W = Math.max(...ss.map(x => x.weight)), top = ss.filter(x => x.weight === W);
+    return { day: s.day, t: s.startedAt, W, top, minR: Math.min(...top.map(x => x.reps)), e: Math.max(...ss.map(x => e1(x.weight, x.reps))) };
+  });
+}
+function slopePct(h) {
+  const T = Date.now(), pts = h.filter(x => T - x.t <= 56 * 864e5).slice(-6);
+  if (pts.length < 3) return null;
+  const xs = pts.map(p => (p.t - pts[0].t) / (7 * 864e5)), ys = pts.map(p => p.e), mx = avg(xs), my = avg(ys);
+  let sxx = 0, sxy = 0; xs.forEach((x, i) => { sxx += (x - mx) ** 2; sxy += (x - mx) * (ys[i] - my); });
+  if (sxx <= 0 || my <= 0) return null;
+  return sxy / sxx / my * 100;
+}
+const COACH_TIPS = [
+  "Добавь один подход к этому упражнению на ближайшие 2 недели.",
+  "Смени диапазон повторений (например, 6–8 вместо 10–12), чтобы дать мышцам новую задачу.",
+  "Увеличь отдых между подходами до 2–3 минут: рабочий вес чаще идёт вверх при полном восстановлении.",
+  "Проверь технику: запиши видео и сравни амплитуду и темп. Часто рост упирается в них."
+];
+function coachCalc() {
+  const T = Date.now(), names = [...new Set(D.sessions.filter(s => s.finishedAt != null).flatMap(s => s.sets.map(x => x.exercise)))];
+  const raise = [], slow = [];
+  for (const n of names) {
+    const h = exSessions(n); if (!h.length) continue;
+    const a = h[h.length - 1], b = h[h.length - 2];
+    if (T - a.t > 60 * 864e5) continue;
+    if (a.W > 0 && b) {
+      const inc = a.W >= 100 ? 5 : a.W >= 20 ? 2.5 : 1;
+      const r1ok = a.top.length >= 2 ? a.minR >= 10 : a.minR >= 12;
+      const r2ok = a.W === b.W && a.minR >= 8 && b.minR >= 8 && a.top.length >= 2 && b.top.length >= 2;
+      if (r1ok || r2ok) raise.push({ n, W: a.W, next: a.W + inc, why: r1ok ? `в последней тренировке все рабочие подходы по ${a.minR} и больше повторений` : `два раза подряд ${fmtNum(a.W)} кг по ${Math.min(a.minR, b.minR)}+ повторений во всех подходах` });
+    }
+    const sp = slopePct(h);
+    if (sp != null && sp < 0.5) slow.push({ n, sp, down: sp < -1.5, tip: COACH_TIPS[parseInt(hash36(n), 36) % COACH_TIPS.length] });
+  }
+  slow.sort((p, q) => p.sp - q.sp);
+  const f7 = X().fat.filter(x => x.day >= addDays(today(), -6)).sort((p, q) => (p.day < q.day ? -1 : 1));
+  const last = f7[f7.length - 1] || null, tired = f7.filter(x => x.lvl >= 3 && x.lvl <= 4).length;
+  const pain = !!(last && last.lvl === 5 && last.day >= addDays(today(), -3));
+  const deload = !!(last && last.lvl !== 5 && (last.lvl === 4 || (last.lvl === 3 && tired >= 2))) || slow.filter(x => x.down).length >= 2;
+  return { raise, slow, last, pain, deload, tired };
+}
+const FAT_LBL = { 1: "Свежий", 2: "Нормально", 3: "Устал", 4: "Очень устал", 5: "Что-то болит" };
+function viewCoach() {
+  const c = coachCalc(), T = today(), cur = X().fat.find(x => x.day === T);
+  let h = '<div class="sec" style="margin-top:6px"><h2>Тренер</h2></div><div class="sub" style="margin:-4px 4px 10px">Советы по твоей истории тренировок. Это расчёты по правилам, а не врач и не обещание результата.</div>';
+  h += '<div class="card"><div class="b">Как самочувствие сегодня?</div><div class="seg fatseg" style="margin-top:8px" role="group" aria-label="Самочувствие">' +
+    [1, 2, 3, 4, 5].map(l => `<button class="${cur && cur.lvl === l ? "on" : ""}" data-act="fat" data-l="${l}">${FAT_LBL[l]}</button>`).join("") + "</div></div>";
+  const done = D.sessions.filter(s => s.finishedAt != null).length;
+  if (done < 2) return h + '<div class="card empty">Проведи хотя бы две тренировки с одним и тем же упражнением, и тренер начнёт давать советы.</div>';
+  // главный вывод
+  let head, cls = "";
+  if (c.pain) { head = "Есть боль: не тренируй больное место. Если боль острая или не проходит несколько дней, покажись врачу. Остальные мышцы можно тренировать с лёгким весом."; cls = "w"; }
+  else if (c.deload) { head = "Лучше разгрузиться на ближайшую неделю: вес −10%, подходов на 30–40% меньше, не доводи до отказа (оставляй 2–3 повторения в запасе). Спи 7–9 часов и не режь калории."; cls = "w"; }
+  else if (c.raise.length) head = `Есть что повысить: ${c.raise.slice(0, 3).map(x => x.n).join(", ")}. Подробности ниже.`;
+  else if (c.slow.length) head = "Прогресс идёт, но часть упражнений стоит на месте. Смотри разбор ниже.";
+  else head = "Всё идёт ровно: держи текущую программу и добавляй повторения или вес, когда все подходы даются легко.";
+  h += cls === "w" ? `<div class="warn">${esc(head)}</div>` : `<div class="card" style="border-left:4px solid var(--accent)">${esc(head)}</div>`;
+  h += '<div class="sec"><h2>Можно повысить вес</h2></div>';
+  h += c.raise.length ? c.raise.map(x => `<div class="card"><div class="b">${esc(x.n)}</div><div class="sub" style="margin-top:2px">Сейчас ${fmtNum(x.W)} кг → попробуй <b>${fmtNum(x.next)} кг</b></div><div class="sub">Почему: ${esc(x.why)}.</div></div>`).join("") + '<div class="sub" style="margin:0 4px 8px">Если на новом весе получается меньше 6–8 повторений, вернись на прежний и повтори через неделю.</div>'
+    : '<div class="card empty">Пока рано: повышай вес, когда все рабочие подходы выполняются на 10 и больше повторений или два раза подряд на 8 и больше.</div>';
+  h += '<div class="sec"><h2>Прогрессируют медленнее</h2></div>';
+  h += c.slow.length ? c.slow.slice(0, 5).map(x => `<div class="card"><div class="b">${esc(x.n)}</div><div class="sub" style="margin-top:2px">Темп силы: ${pctTxt(x.sp)} в неделю${x.down ? " (падает)" : ""}.</div><div class="sub">${x.down ? "Сила снижается. Сними 5–10% веса, верни чистые повторения и проверь сон и калории." : esc(x.tip)}</div></div>`).join("")
+    : '<div class="card empty">Отстающих упражнений не видно. Для оценки нужно минимум 3 тренировки с упражнением за последние 8 недель.</div>';
+  h += '<div class="sec"><h2>Усталость и нагрузка</h2></div>';
+  const f = X().fat.slice().sort((p, q) => (p.day < q.day ? 1 : -1)).slice(0, 5);
+  h += f.length ? '<div class="card"><div class="sub">Последние отметки: ' + f.map(x => `${fmtDay(x.day)}: ${FAT_LBL[x.lvl].toLowerCase()}`).join(" · ") + "</div></div>" : '<div class="card empty">Отмечай самочувствие перед тренировкой. Если усталость повторяется, тренер предложит разгрузку.</div>';
+  return h;
+}
+
+/* ---------------- что съесть, чтобы добрать КБЖУ ---------------- */
+const FOODS = [
+  ["Куриная грудка, варёная", 29.8, 1.8, 0, 250], ["Говядина варёная, постная", 27, 12, 0, 250], ["Лосось, запечённый", 22, 12, 0, 200],
+  ["Тунец консервированный в соку", 25, 1, 0, 150], ["Яйцо куриное", 12.7, 11.5, 0.7, 240], ["Творог 5%", 17, 5, 1.8, 250], ["Творог обезжиренный", 18, 0.6, 1.8, 250],
+  ["Греческий йогурт 2%", 6, 2, 4, 300], ["Кефир 2,5%", 2.9, 2.5, 4, 400], ["Молоко 2,5%", 2.9, 2.5, 4.8, 400], ["Сыр твёрдый", 25, 27, 0, 60],
+  ["Гречка варёная", 4.2, 1.1, 21.3, 300], ["Рис варёный", 2.7, 0.3, 28.2, 300], ["Макароны варёные", 5.5, 0.9, 30, 300], ["Овсяные хлопья (сухие)", 12, 6, 60, 100],
+  ["Картофель варёный", 2, 0.4, 16.7, 400], ["Хлеб цельнозерновой", 9, 3, 42, 100], ["Банан", 1.5, 0.2, 21.8, 250], ["Яблоко", 0.4, 0.4, 9.8, 250],
+  ["Курага", 5.2, 0.3, 51, 60], ["Мёд", 0.8, 0, 81, 30], ["Арахисовая паста", 25, 50, 13, 40], ["Миндаль", 21, 50, 10, 40], ["Грецкие орехи", 15, 65, 7, 40],
+  ["Оливковое масло", 0, 100, 0, 20], ["Авокадо", 2, 15, 9, 100], ["Протеин сывороточный (порошок)", 80, 6, 6, 40], ["Чечевица варёная", 9, 0.4, 20, 300]
+];
+function eatRemaining() {
+  const pl = nutriPlan(); if (!pl) return null;
+  const t = sumM(dayLog(S.kvDay || today()));
+  return { b: pl.b - t.b, j: pl.j - t.j, u: pl.u - t.u, k: pl.k - t.k, pl };
+}
+function eatPlan(rem) {
+  const cands = N().prods.filter(p => p.b || p.j || p.u).map(p => ({ name: p.name, b: p.b, j: p.j, u: p.u, own: true, max: 300 }))
+    .concat(FOODS.map(f => ({ name: f[0], b: f[1], j: f[2], u: f[3], max: f[4] })));
+  let R = { b: Math.max(0, rem.b), j: Math.max(0, rem.j), u: Math.max(0, rem.u) };
+  const out = [];
+  for (let step = 0; step < 4; step++) {
+    if (4 * R.b + 9 * R.j + 4 * R.u < 70) break;
+    let best = null;
+    for (const f of cands) {
+      if (out.some(o => o.name === f.name)) continue;
+      for (let g = 20; g <= f.max; g += 10) {
+        const pb = f.b * g / 100, pj = f.j * g / 100, pu = f.u * g / 100;
+        const cov = 5.2 * Math.min(pb, R.b) + 9 * Math.min(pj, R.j) + 4 * Math.min(pu, R.u);
+        const exc = 4 * Math.max(0, pb - R.b) + 9 * Math.max(0, pj - R.j) + 4 * Math.max(0, pu - R.u);
+        const score = cov - 2.5 * exc;
+        if (!best || score > best.score) best = { f, g, score, b: pb, j: pj, u: pu };
+      }
+    }
+    if (!best || best.score < 25) break;
+    out.push({ name: best.f.name, g: best.g, b: best.b, j: best.j, u: best.u, own: !!best.f.own });
+    R = { b: Math.max(0, R.b - best.b), j: Math.max(0, R.j - best.j), u: Math.max(0, R.u - best.u) };
+  }
+  return { list: out, left: R };
+}
+function viewEat() {
+  const rem = eatRemaining();
+  const head = t => `<div class="sheet-h" style="margin-bottom:8px"><div class="h1">${t}</div><button class="link" data-act="eat-close">Закрыть</button></div>`;
+  let h = '<div class="scrim" data-act="eat-close"></div><div class="sheet" role="dialog" aria-label="Что съесть"><div class="sheet-in"><div class="grab"></div>' + head("Что съесть, чтобы добрать КБЖУ?");
+  if (!rem) return h + '<div class="warn">Сначала нужна норма: запиши вес в «Советах» или нажми «Моя норма».</div></div></div>';
+  const rk = 4 * Math.max(0, rem.b) + 9 * Math.max(0, rem.j) + 4 * Math.max(0, rem.u);
+  if (rk < 70) return h + '<div class="card ok" style="border-left:4px solid #1e8e3e">Норма на этот день уже набрана. Добирать нечего.</div></div></div>';
+  const p = eatPlan(rem);
+  h += `<div class="card"><div class="b">Осталось добрать</div><div class="sub" style="margin-top:2px">${fmtK(rem.k > 0 ? rem.k : rk)} ккал · Б ${Math.round(Math.max(0, rem.b))} · Ж ${Math.round(Math.max(0, rem.j))} · У ${Math.round(Math.max(0, rem.u))} г</div></div>`;
+  if (!p.list.length) return h + '<div class="card empty">Подходящих продуктов не нашлось. Добавь свои продукты в «Счётчик КБЖУ».</div></div></div>';
+  h += '<div class="sub" style="margin:4px 4px 8px">Можно собрать так. Нажми «+», чтобы записать порцию в дневник.</div>';
+  h += p.list.map((x, i) => `<div class="mitem rec"><div class="g"><div class="n">${fmtNum(x.g)} г · ${esc(x.name)}</div><div class="sub">${Math.round(KC(x.b, x.j, x.u))} ккал · Б ${r1(x.b)} · Ж ${r1(x.j)} · У ${r1(x.u)}${x.own ? " · твой продукт" : ""}</div></div><button class="addc" data-act="eat-add" data-i="${i}" aria-label="Записать: ${esc(x.name)}">${icon("plus", 20)}</button></div>`).join("");
+  h += `<div class="sub" style="margin:6px 4px">После этого останется примерно: Б ${Math.round(p.left.b)} · Ж ${Math.round(p.left.j)} · У ${Math.round(p.left.u)} г.</div>`;
+  h += '<div class="sub" style="margin:6px 4px">Значения общих продуктов ориентировочные (на 100 г по справочным таблицам); у твоих продуктов берутся твои данные.</div></div></div>';
+  return h;
+}
+
+/* ---------------- прогноз результатов ---------------- */
+function linFit(p) {
+  const n = p.length; if (n < 3) return null;
+  const mx = avg(p.map(q => q.x)), my = avg(p.map(q => q.y)); let sxx = 0, sxy = 0;
+  p.forEach(q => { sxx += (q.x - mx) ** 2; sxy += (q.x - mx) * (q.y - my); });
+  if (sxx <= 0) return null;
+  const b = sxy / sxx, a = my - b * mx; let ss = 0; p.forEach(q => { ss += (q.y - (a + b * q.x)) ** 2; });
+  const sd = Math.sqrt(ss / (n - 2)); return { a, b, n, sd, se: sd / Math.sqrt(sxx) };
+}
+function fcWeight() {
+  const T = today(), wk = [];
+  for (let k = 3; k >= 0; k--) {
+    const a = addDays(T, -(7 * k + 6)), b = addDays(T, -7 * k), v = D.bodyweight.filter(p => p.day >= a && p.day <= b).map(p => p.weight);
+    wk.push({ a, b, v: v.length ? avg(v) : null, n: v.length });
+  }
+  const pts = D.bodyweight.filter(p => p.day >= addDays(T, -42)).map(p => ({ x: daysBetween(T, p.day), y: p.weight }));
+  const span = pts.length ? Math.max(...pts.map(p => p.x)) - Math.min(...pts.map(p => p.x)) : 0;
+  const fit = pts.length >= 3 && span >= 10 ? linFit(pts) : null;
+  let proj = null;
+  if (fit) {
+    const slope = Math.max(-1.2 / 7, Math.min(1.2 / 7, fit.b)), now = fit.a, mid = now + slope * 56, band = Math.max(0.4, 56 * fit.se + fit.sd);
+    proj = { slope: slope * 7, now, mid, lo: mid - band, hi: mid + band };
+  }
+  return { wk, pts, fit, proj };
+}
+function fcStrength() {
+  const T = today(), A0 = addDays(T, -27), B1 = addDays(T, -28), B0 = addDays(T, -55), best = {};
+  for (const s of D.sessions) if (s.finishedAt != null) for (const x of s.sets) {
+    if (!(x.reps > 0)) continue; const v = e1(x.weight, x.reps), k = x.exercise;
+    const o = best[k] || (best[k] = { a: 0, b: 0 });
+    if (s.day >= A0 && s.day <= T) o.a = Math.max(o.a, v); else if (s.day >= B0 && s.day <= B1) o.b = Math.max(o.b, v);
+  }
+  const list = Object.entries(best).filter(([, o]) => o.a > 0 && o.b > 0).map(([n, o]) => ({ n, pct: (o.a / o.b - 1) * 100 })).sort((p, q) => q.pct - p.pct);
+  return { list, avg: list.length ? avg(list.map(x => x.pct)) : null };
+}
+function fcPlan() {
+  const T = today(), plan = (SETD().notif.w.days || []).length || 3, a = addDays(T, -27);
+  const ses = D.sessions.filter(s => s.finishedAt != null && s.day >= a && s.day <= T).length;
+  const dd = new Set(N().log.filter(x => x.day >= a && x.day <= T).map(x => x.day)).size;
+  return { plan, perWeek: ses / 4, ses, diary: dd };
+}
+function fcSvg(f) {
+  const W = 320, H = 150, P = 14, x0 = -42, x1 = 56;
+  const ys = f.pts.map(p => p.y).concat(f.proj ? [f.proj.lo, f.proj.hi] : []);
+  if (!ys.length) return "";
+  let lo = Math.min(...ys), hi = Math.max(...ys); if (hi - lo < 2) { lo -= 1; hi += 1; }
+  const X0 = x => P + (x - x0) / (x1 - x0) * (W - 2 * P), Y0 = y => H - P - (y - lo) / (hi - lo) * (H - 2 * P);
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="График веса и приблизительный прогноз на 8 недель" style="display:block">`;
+  s += `<line x1="${X0(0)}" y1="${P}" x2="${X0(0)}" y2="${H - P}" stroke="var(--line)" stroke-dasharray="3 3"/>`;
+  if (f.proj) {
+    s += `<polygon points="${X0(0)},${Y0(f.proj.now)} ${X0(56)},${Y0(f.proj.hi)} ${X0(56)},${Y0(f.proj.lo)}" fill="var(--accent)" opacity=".16"/>`;
+    s += `<line x1="${X0(0)}" y1="${Y0(f.proj.now)}" x2="${X0(56)}" y2="${Y0(f.proj.mid)}" stroke="var(--accent)" stroke-width="2" stroke-dasharray="5 4"/>`;
+  }
+  if (f.pts.length > 1) s += `<polyline fill="none" stroke="var(--fg)" stroke-width="2" points="${f.pts.slice().sort((p, q) => p.x - q.x).map(p => X0(p.x) + "," + Y0(p.y)).join(" ")}"/>`;
+  s += f.pts.map(p => `<circle cx="${X0(p.x)}" cy="${Y0(p.y)}" r="3" fill="var(--fg)"/>`).join("");
+  return s + "</svg>";
+}
+function viewForecast() {
+  const w = fcWeight(), st = fcStrength(), pl = fcPlan(), T = today();
+  let h = '<div class="warn">Это приблизительная оценка по твоей истории, а не обещание результата. Вес колеблется из-за воды, соли и сна, поэтому прогноз меняется с каждой записью.</div>';
+  h += '<div class="sec"><h2>Вес за 4 недели</h2></div><div class="card">';
+  const vs = w.wk.filter(x => x.v != null);
+  h += `<div class="sub">Средний вес по неделям (кг)</div><div class="tiles" style="margin-top:6px">${w.wk.map((x, i) => `<div class="tile"><small class="l">${i === 3 ? "эта нед." : (3 - i) + " нед. назад"}</small><div class="v">${x.v == null ? "—" : fmtNum(r1(x.v))}</div></div>`).join("")}</div>`;
+  h += vs.length >= 2 ? `<div class="b" style="margin-top:8px">За 4 недели: ${kgTxt(vs[vs.length - 1].v - vs[0].v)}</div>` : '<div class="sub" style="margin-top:8px">Для динамики нужны записи веса минимум в две недели. Добавляй вес в «Советах».</div>';
+  h += "</div>";
+  h += '<div class="sec"><h2>Прогноз на 8 недель</h2></div><div class="card">';
+  if (w.proj) {
+    h += fcSvg(w) + `<div class="sub" style="margin-top:6px">Сплошная линия: твой вес. Пунктир и полоса: примерный коридор, если сохранить текущий режим.</div>` +
+      `<div class="b" style="margin-top:8px">Через 8 недель около ${fmtNum(r1(w.proj.mid))} кг</div><div class="sub">Вероятный диапазон: ${fmtNum(r1(w.proj.lo))}–${fmtNum(r1(w.proj.hi))} кг. Текущий темп ${kgTxt(w.proj.slope)} в неделю.</div>`;
+    const g = B().goal;
+    if (g && g.targetWeight && g.type !== "keep") {
+      const left = Math.max(1, daysBetween(T, goalEnd(g)) / 7), need = (g.targetWeight - w.proj.now) / left;
+      h += `<div class="sub" style="margin-top:6px">До цели ${fmtNum(g.targetWeight)} кг к ${fmtDay(goalEnd(g))} нужен темп около ${kgTxt(need)} в неделю.</div>`;
+    }
+  } else h += '<div class="sub">Для прогноза нужно минимум 3 записи веса за последние 6 недель и разброс по датам не меньше 10 дней.</div>';
+  h += "</div>";
+  h += '<div class="sec"><h2>Силовые показатели</h2></div><div class="card">';
+  if (st.avg != null) {
+    const rate = st.avg / 4, hiG = Math.max(-25, Math.min(25, rate * 8)), loG = hiG * 0.5;
+    h += `<div class="b">В среднем ${pctTxt(st.avg)} за 4 недели</div><div class="sub" style="margin-top:4px">Сравнение лучших результатов за последние 4 недели с предыдущими 4.</div>` +
+      st.list.slice(0, 6).map(x => `<div class="mitem" style="border-top:0;padding:4px 0"><div class="g">${esc(x.n)}</div><b>${pctTxt(x.pct)}</b></div>`).join("") +
+      `<div class="sub" style="margin-top:6px">Если темп сохранится, через 8 недель можно ждать примерно ${pctTxt(Math.min(loG, hiG))}…${pctTxt(Math.max(loG, hiG))}. Обычно рост замедляется, поэтому нижняя граница реалистичнее.</div>`;
+  } else h += '<div class="sub">Нужны тренировки с одними и теми же упражнениями и за последние 4 недели, и за предыдущие 4.</div>';
+  h += "</div>";
+  h += '<div class="sec"><h2>Насколько соблюдается план</h2></div><div class="card">' +
+    `<div class="mitem" style="border-top:0"><div class="g">Тренировки: ${wkFmt(pl.perWeek)} в неделю из ${pl.plan} по плану</div><b>${Math.min(100, Math.round(pl.perWeek / pl.plan * 100))}%</b></div>` +
+    `<div class="mitem"><div class="g">Дневник питания: ${pl.diary} из 28 дней</div><b>${Math.round(pl.diary / 28 * 100)}%</b></div>` +
+    '<div class="sub" style="margin-top:6px">Число тренировок в неделю берётся из «Уведомлений» (дни напоминаний о тренировках).</div></div>';
+  return h;
+}
+
+/* ---------------- индекс регулярности ---------------- */
+function rgWeek() {
+  const T = today(), a = addDays(T, -6), days = Array.from({ length: 7 }, (_, i) => addDays(a, i));
+  const plan = (SETD().notif.w.days || []).length || 3;
+  const ses = D.sessions.filter(s => s.finishedAt != null && s.day >= a && s.day <= T).length;
+  const diary = days.filter(d => N().log.some(x => x.day === d));
+  const sl = days.filter(d => X().sleep[d] > 0), slAvg = sl.length ? avg(sl.map(d => X().sleep[d])) : null;
+  const hb = X().habits, hbDone = hb.length ? days.reduce((s, d) => s + (X().hdone[d] || []).filter(id => hb.some(h => h.id === id)).length, 0) : 0;
+  const sleepUsed = Object.keys(X().sleep).some(d => d >= addDays(T, -13));
+  const comps = [
+    { k: "tr", name: "Тренировки", txt: `${Math.min(ses, 99)} из ${plan}`, r: Math.min(1, ses / plan) },
+    { k: "di", name: "Дневник питания", txt: `${diary.length} из 7 дней`, r: diary.length / 7 }
+  ];
+  if (sleepUsed) comps.push({ k: "sl", name: "Сон", txt: `данные заполнены за ${sl.length} из 7 дней` + (slAvg ? `, в среднем ${wkFmt(slAvg)} ч` : ""), r: sl.length / 7 });
+  if (hb.length) comps.push({ k: "hb", name: "Привычки", txt: `выполнено ${Math.round(hbDone / (hb.length * 7) * 100)}% целей`, r: hbDone / (hb.length * 7) });
+  const idx = Math.round(avg(comps.map(c => c.r)) * 100);
+  return { a, T, days, plan, ses, diary, comps, idx, sl, slAvg, hb };
+}
+const RG_TIPS = {
+  tr: "Заранее выбери дни и время тренировок и включи напоминание в «Уведомлениях». Если не получается на целую тренировку, договорись с собой хотя бы на короткую.",
+  di: "Записывай еду сразу после приёма, а не вечером. Для начала достаточно отмечать завтрак и ужин.",
+  sl: "Заполняй сон утром, пока помнишь: это занимает 10 секунд. Заодно попробуй ложиться на 30 минут раньше.",
+  hb: "Оставь одну-две самые важные привычки вместо длинного списка и привяжи их к тому, что уже делаешь каждый день."
+};
+function rgReport(w) {
+  const good = w.comps.filter(c => c.r >= 0.8), bad = w.comps.slice().sort((a, b) => a.r - b.r)[0];
+  const T = w.T, miss = w.days.filter(d => !w.diary.includes(d)).map(d => WD[new Date(d + "T00:00:00").getDay()]);
+  const pl = nutriPlan(), t = sumM(N().log.filter(x => x.day >= w.a && x.day <= T)), dn = w.diary.length;
+  let extra = "";
+  if (pl && dn >= 3) {
+    const kd = t.k / dn, bd = t.b / dn;
+    if (kd < pl.k * 0.88) extra = `В записанные дни в среднем ${fmtK(kd)} ккал при норме ${fmtK(pl.k)}: не добираешь.`;
+    else if (kd > pl.k * 1.12) extra = `В записанные дни в среднем ${fmtK(kd)} ккал при норме ${fmtK(pl.k)}: перебор.`;
+    else if (bd < pl.b * 0.85) extra = `Белка в среднем ${Math.round(bd)} г при норме ${pl.b} г: добавь белковую еду.`;
+  }
+  const goodTxt = good.length ? good.map(c => `${c.name.toLowerCase()}: ${c.txt}`).join("; ") + "." : "Пока ни один показатель не дошёл до 80%, и это нормально для начала: главное — вернуться в ритм.";
+  let badTxt = bad && bad.r < 0.8 ? `${bad.name}: ${bad.txt}.` : "Явных провалов нет.";
+  if (bad && bad.k === "di" && miss.length && miss.length < 7) badTxt += ` Чаще всего пропускаешь: ${miss.slice(0, 3).join(", ")}.`;
+  if (extra) badTxt += " " + extra;
+  const one = bad && bad.r < 0.8 ? RG_TIPS[bad.k] : "Держи режим ещё неделю и попробуй добавить 2,5 кг в упражнении, где все подходы даются легко (подсказки в «Прогресс» → «Тренер»).";
+  return { goodTxt, badTxt, one };
+}
+function viewRegular() {
+  const w = rgWeek(), rp = rgReport(w), x = S.regDay === "y" ? addDays(w.T, -1) : w.T;
+  let h = `<div class="ringcard"><div class="rwrap">${ringSvg(w.idx, 100)}<div class="rmid"><b>${w.idx}%</b><span>индекс</span></div></div><div class="rbars"><div class="sub" style="line-height:1.5">Показывает, насколько стабильно ты выполняешь собственный план за последние 7 дней, а не что показывают весы.</div></div></div>`;
+  h += '<div class="card">' + w.comps.map((c, i) => `<div class="mitem" style="${i ? "" : "border-top:0;"}"><div class="g"><div class="n">${c.name}</div><div class="sub">${esc(c.txt)}</div></div><b>${Math.round(c.r * 100)}%</b></div>`).join("") + "</div>";
+  h += '<div class="sec"><h2>Отчёт за неделю</h2></div><div class="card"><div class="sub" style="margin-bottom:6px">' + fmtDay(w.a) + " – " + fmtDay(w.T) + `</div><div class="b">Что получается</div><div class="sub" style="margin-bottom:8px">${esc(rp.goodTxt)}</div><div class="b">Что мешает</div><div class="sub" style="margin-bottom:8px">${esc(rp.badTxt)}</div><div class="b">Одно изменение на следующую неделю</div><div class="sub">${esc(rp.one)}</div></div>`;
+  h += '<div class="sec"><h2>Отметки дня</h2></div><div class="seg" role="group" aria-label="День"><button class="' + (S.regDay === "y" ? "" : "on") + '" data-act="rg-day" data-d="t">Сегодня</button><button class="' + (S.regDay === "y" ? "on" : "") + '" data-act="rg-day" data-d="y">Вчера</button></div>';
+  h += '<div class="card"><label class="field-l" for="sl-h">Сколько часов спал(а) ночью</label><div class="row" style="margin-top:0"><input id="sl-h" inputmode="decimal" placeholder="7,5" value="' + (X().sleep[x] ? String(X().sleep[x]).replace(".", ",") : "") + '"><button class="btn soft" style="margin:0;width:auto;flex:none" data-act="rg-sleep">Сохранить</button></div></div>';
+  const hb = X().habits, dn = X().hdone[x] || [];
+  h += '<div class="card"><div class="b">Привычки</div>' + (hb.length ? hb.map(p => `<div class="mitem" style="padding:4px 0"><button class="chk ${dn.includes(p.id) ? "on" : ""}" data-act="rg-hb" data-id="${esc(p.id)}" role="checkbox" aria-checked="${dn.includes(p.id)}" aria-label="${esc(p.name)}">${dn.includes(p.id) ? icon("check", 18) : ""}</button><div class="g" style="padding-left:8px">${esc(p.name)}</div><button class="ico" data-act="rg-hb-del" data-id="${esc(p.id)}" aria-label="Удалить привычку ${esc(p.name)}">${icon("x", 16)}</button></div>`).join("") : '<div class="sub" style="margin-top:4px">Добавь привычки, которые хочешь выполнять каждый день: вода, шаги, растяжка.</div>') +
+    '<div class="row"><input id="hb-new" maxlength="40" placeholder="Новая привычка" autocomplete="off"><button class="btn soft" style="margin:0;width:auto;flex:none" data-act="rg-hb-add">Добавить</button></div></div>';
+  h += '<div class="sub" style="margin:8px 4px">Отчёт собирается на экране. Если уведомления включены, в воскресенье вечером и в понедельник утром вверху «Дневника» появится напоминание его открыть. Сообщения в Telegram сам бот отправить не может, пока у приложения нет собственного сервера.</div>';
+  return h;
+}
+
+/* ---------------- действия и обработчики ---------------- */
+Object.assign(actions, {
+  "fb-cfg": () => {
+    const u = (($("#fb-url") || {}).value || "").trim().replace(/\/+$/, ""), k = (($("#fb-key") || {}).value || "").trim();
+    if (!/^https:\/\/[a-z0-9-]+(\.[a-z0-9-]+)*\.(firebaseio\.com|firebasedatabase\.app)$/i.test(u)) return note("Нужен адрес вида https://имя-проекта-default-rtdb.firebaseio.com");
+    if (k.length < 20 || /\s/.test(k)) return note("Вставь Web API key целиком (начинается с AIza).");
+    FBC = { db: u, key: k }; fbSaveC(); shCache = null; render();
+  },
+  "fb-cfg-reset": async () => { if (await ask("Изменить адрес и ключ облака?")) { FBC = {}; fbSaveC(); render(); } },
+  "fb-in": () => fbEnter("signInWithPassword"),
+  "fb-reg": () => fbEnter("signUp"),
+  "fb-reset": async () => {
+    const email = (($("#fb-email") || {}).value || "").trim();
+    if (!/^\S+@\S+\.\S+$/.test(email)) return note("Впиши почту в поле выше, и я отправлю письмо для сброса пароля.");
+    try { await fbHttp(`https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${encodeURIComponent(fbKey())}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ requestType: "PASSWORD_RESET", email }) }); note("Письмо для сброса пароля отправлено на " + email + ". Проверь и папку «Спам»."); }
+    catch (e) { note(e.message); }
+  },
+  "fb-out": async () => {
+    if (!(await ask("Выйти из аккаунта на этом устройстве? Данные в облаке останутся."))) return;
+    const wipe = await ask("Очистить данные на этом устройстве? Рекомендуется, если телефон или компьютер не ваш.");
+    FBA = null; fbSaveA(); SM.rev = 0; SM.dirty = true; smSave(); fbLast = null;
+    if (wipe) { resetLocal(); location.reload(); return; }
+    render();
+  },
+  "fat": b => {
+    const l = +b.dataset.l, T = today(), f = X().fat; const i = f.findIndex(x => x.day === T);
+    if (i >= 0) f[i].lvl = l; else f.push({ day: T, lvl: l });
+    X().fat = f.filter(x => x.day >= addDays(T, -60)); persist(); render();
+  },
+  "eat-open": () => { S.eat = true; render(); },
+  "eat-close": () => { S.eat = false; render(); },
+  "eat-add": b => {
+    const rem = eatRemaining(); if (!rem) return;
+    const x = eatPlan(rem).list[+b.dataset.i]; if (!x) return;
+    N().log.push({ id: uid8(), day: S.kvDay || today(), meal: autoMeal(), name: x.name, g: x.g, k: KC(x.b, x.j, x.u), b: x.b, j: x.j, u: x.u });
+    persist(); render();
+  },
+  "rg-day": b => { S.regDay = b.dataset.d; render(); },
+  "rg-sleep": () => {
+    const v = parseNum(($("#sl-h") || {}).value || ""), d = S.regDay === "y" ? addDays(today(), -1) : today();
+    if (!(v >= 0 && v <= 24)) return note("Проверь число часов: от 0 до 24.");
+    if (v > 0) X().sleep[d] = Math.round(v * 10) / 10; else delete X().sleep[d];
+    persist(); render();
+  },
+  "rg-hb": b => {
+    const d = S.regDay === "y" ? addDays(today(), -1) : today(), a = X().hdone[d] || (X().hdone[d] = []), i = a.indexOf(b.dataset.id);
+    if (i >= 0) a.splice(i, 1); else a.push(b.dataset.id);
+    persist(); render();
+  },
+  "rg-hb-add": () => {
+    const n = cleanTitle((($("#hb-new") || {}).value || "")); if (!n) return note("Впиши название привычки.");
+    if (X().habits.length >= 12) return note("Не больше 12 привычек.");
+    X().habits.push({ id: uid8(), name: n }); persist(); render();
+  },
+  "rg-hb-del": async b => {
+    const p = X().habits.find(x => x.id === b.dataset.id); if (!p) return;
+    if (!(await ask("Удалить привычку «" + p.name + "»?"))) return;
+    X().habits = X().habits.filter(x => x.id !== p.id); persist(); render();
+  },
+  "pex-pick": async b => { S.sum.exercise = b.dataset.name; await calc(); },
+  "kv-pmenu": b => { S.kvp.pm = b.dataset.id; render(); },
+  "kv-pm-close": () => { S.kvp.pm = null; render(); },
+  "kv-pm-edit": () => {
+    const p = N().prods.find(x => x.id === S.kvp.pm); S.kvp.pm = null; if (!p) return render();
+    S.kvp.manual = true; S.kvp.draft = Object.assign({}, p, { editId: p.id }); S.kvp.msg = ""; render();
+  },
+  "kv-pm-del": b => { S.kvp.pm = null; render(); return actions["kv-pdel"](b); }
+});
+
+function pexNames() { return S.catalog.filter(c => c.prev).map(c => c.name); }
+function pexFill(q) {
+  const l = $("#pex-list"); if (!l) return;
+  const w = normQ(q), arr = pexNames().filter(n => !w || hitQ(n, w)).slice(0, 10);
+  l.innerHTML = arr.map(n => `<button class="exitem" data-act="pex-pick" data-name="${esc(n)}">${esc(n)}</button>`).join("");
+  l.classList.toggle("has", arr.length > 0);
+}
+document.addEventListener("focusin", e => { if (e.target.id === "pex") { e.target.select(); pexFill(""); } });
+document.addEventListener("input", e => { if (e.target.id === "pex") pexFill(e.target.value); });
+
+ICON.coach = '<path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/>';
 
 /* ---------- Telegram ---------- */
 try {
