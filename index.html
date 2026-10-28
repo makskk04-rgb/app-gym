@@ -359,6 +359,22 @@
   .dlg-act button { flex: 1; min-height: 46px; border: 0; border-radius: 12px; font-weight: 600; background: var(--card); color: var(--fg); }
   .dlg-act button.ok { background: var(--accent); color: var(--on-accent); }
   @media (prefers-reduced-motion: no-preference) { .sheet { animation: up .18s ease-out; } @keyframes up { from { transform: translateY(24px); opacity: .6; } } }
+  :root { --done: #2c9a5e; }
+  .chk.on { background: var(--done); border-color: var(--done); color: #fff; }
+  .dashes i.f { background: var(--done); }
+  input, textarea, select { caret-color: var(--accent); }
+  :root[data-theme="dark"] input, :root[data-theme="dark"] textarea, :root[data-theme="night"] input, :root[data-theme="night"] textarea, :root[data-theme="brutal"] input, :root[data-theme="brutal"] textarea { caret-color: #ffd54a; }
+  .sheet input, .sheet textarea { background: var(--card); border: 1.5px solid var(--line); caret-color: var(--link); }
+  .sheet input:focus, .sheet textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--chip); }
+  .prevbtn { border: 1.5px solid var(--line); border-radius: 12px; background: var(--card); padding: 6px 10px; font: inherit; font-size: 11px; color: var(--muted); }
+  .herob { border: 0; background: none; color: inherit; padding: 0; text-align: left; font: inherit; font-family: var(--disp); font-weight: var(--disp-w); text-transform: var(--disp-tf); letter-spacing: var(--disp-ls); font-size: 38px; line-height: .98; }
+  .herob .pen { display: inline-flex; vertical-align: middle; margin-left: 8px; color: var(--muted); }
+  .pp { position: fixed; z-index: 40; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(300px, calc(100vw - 48px)); max-height: 70vh; overflow: auto; border-radius: 18px; background: var(--bg); color: var(--fg); box-shadow: 0 12px 40px rgba(0,0,0,.35); padding: 14px 16px 16px; }
+  .pp-h { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+  .pp-h b { display: block; font-size: 16px; overflow-wrap: anywhere; } .pp-h small { color: var(--muted); font-size: 12px; }
+  .pp-r { display: flex; gap: 12px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  .pp-r span { width: 20px; color: var(--muted); } .pp-r b { font-size: 16px; }
+  .pp-d { padding-left: 4px; border-top: 0; } .pp-d span { color: var(--accent); } .pp-d b { font-weight: 600; font-size: 14px; }
 </style>
 </head>
 <body>
@@ -430,6 +446,7 @@ async function initStore() {
     P.mode = "local";
     try { await Promise.race([syncNow(false), new Promise(r => setTimeout(r, 5000))]); } catch (e) {}
     bootDone = true;
+    try { fixNutri(); } catch (e) {}
     const need = !D.seed1; seedData(); if (need) persist();
   } catch (e) { P.mode = "memory"; bootDone = true; seedData(); }
 }
@@ -721,6 +738,16 @@ function dialog(msg, withCancel) {
 $("#dlg-ok").onclick = () => dlgDone && dlgDone(true);
 $("#dlg-no").onclick = () => dlgDone && dlgDone(false);
 const note = msg => dialog(msg, false);
+function promptText(msg, val) {
+  return new Promise(res => {
+    const pm = $("#dlg-msg"); pm.textContent = msg;
+    const inp = document.createElement("input"); inp.id = "dlg-in"; inp.value = val || ""; inp.maxLength = 40; inp.autocomplete = "off"; inp.style.margin = "0 0 14px";
+    pm.after(inp);
+    $("#dlg-no").hidden = false; $("#dlg-ok").textContent = "Сохранить"; $("#dlg").hidden = false;
+    dlgDone = v => { const out = v ? inp.value : null; inp.remove(); $("#dlg").hidden = true; dlgDone = null; res(out); };
+    inp.focus(); inp.select();
+  });
+}
 const ask = msg => dialog(msg, true);
 
 /* ---------- утилиты ---------- */
@@ -756,6 +783,7 @@ const ICON = {
   history: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"/>', trend: '<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>',
   trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H4v1a3 3 0 0 0 4 3M16 6h4v1a3 3 0 0 1-4 3M12 13v4M8 20h8M10 17h4"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9L7 7M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>',
+  pencil: '<path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19zM14 7l3 3"/>',
   dots: '<path d="M5 12h.01M12 12h.01M19 12h.01" stroke-width="3.5"/>',
   chart: '<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>',
 };
@@ -865,6 +893,7 @@ function viewWMenu() {
   return '<div class="scrim" data-act="wmenu-close"></div>' +
     `<div class="sheet" role="dialog" aria-label="${esc(w.name)}"><div class="sheet-in"><div class="grab"></div>` +
     `<div class="sheet-h" style="margin-bottom:8px"><div class="h1">${esc(w.name)}</div><button class="link" data-act="wmenu-close">Закрыть</button></div>` +
+    `<button class="opt" data-act="wm-ren">${icon("pencil", 20)}<span style="flex:1">Переименовать</span></button>` +
     `<button class="opt" data-act="wm-edit">${icon("list", 20)}<span style="flex:1">Изменить упражнения</span></button>` +
     `<button class="opt" data-act="wm-del" style="color:var(--danger)">${icon("x", 20)}<span style="flex:1">Удалить тренировку</span></button></div></div>`;
 }
@@ -1004,6 +1033,14 @@ function dropHtml(e) {
   }
   return h;
 }
+function prevPop(e) {
+  const pv = e.prev;
+  let body;
+  if (!pv || !pv.sets.length) body = '<div class="sub">Раньше это упражнение не выполнялось.</div>';
+  else body = pv.sets.map((x, i) => `<div class="pp-r"><span>${i + 1}</span><b>${x.weight ? fmtNum(x.weight) + " кг × " + x.reps : x.reps + " повт."}</b></div>` +
+    (x.drops || []).map(d => `<div class="pp-r pp-d"><span>↓</span><b>${fmtNum(d.weight)} кг × ${d.reps}</b></div>`).join("")).join("");
+  return `<div class="scrim" data-act="prev-close"></div><div class="pp" role="dialog" aria-label="Прошлая тренировка"><div class="pp-h"><div><b>${esc(e.name)}</b><small>${pv ? "Прошлый раз · " + fmtDay(pv.day) : "Прошлый раз"}</small></div><button class="ico" data-act="prev-close" aria-label="Закрыть">${icon("x", 16)}</button></div><div class="pp-b">${body}</div></div>`;
+}
 function viewSession() {
   const s = S.session;
   if (S.openEx == null || S.openEx >= s.exercises.length) {
@@ -1013,7 +1050,7 @@ function viewSession() {
   const total = s.exercises.reduce((n, e) => n + e.sets.length, 0);
   const vol = s.exercises.reduce((n, e) => n + e.sets.reduce((a, x) => a + setVol(x), 0), 0);
   let h = memWarn() + `<div class="kick"><button class="back" data-act="back" aria-label="К списку тренировок">${icon("back", 22)}</button>${kickDate()}</div>`;
-  h += `<div class="hero"><div class="hero-t">${esc(s.name)}</div><button class="sq" data-act="add-ex" aria-label="Добавить упражнение">${icon("plus", 22)}</button></div>`;
+  h += `<div class="hero"><button class="hero-t herob" data-act="ren-s" aria-label="Переименовать тренировку: ${esc(s.name)}">${esc(s.name)}<span class="pen">${icon("pencil", 18)}</span></button><button class="sq" data-act="add-ex" aria-label="Добавить упражнение">${icon("plus", 22)}</button></div>`;
   h += weekStrip();
   h += `<div class="tiles"><div class="tile"><small class="l">Объём</small><div class="v">${Math.round(vol).toLocaleString("ru-RU")}<small>кг</small></div></div>` +
     `<div class="tile"><small class="l">Время</small><div class="v" data-time role="timer" aria-label="Время тренировки">${timeHtml()}</div></div>` +
@@ -1030,7 +1067,7 @@ function viewSession() {
     let dash = "";
     for (let k = 0; k < plan; k++) dash += `<i class="${k < e.sets.length ? "f" : k === e.sets.length ? "c" : ""}"></i>`;
     return `<div class="excard"><div class="ex-top"><div style="display:flex;gap:10px;align-items:flex-start;min-width:0">${e.photo ? thumb(e.photo, 44) : ""}<div class="ex-name">${esc(e.name)}</div></div>` +
-      `<div class="ex-prev">Прошлый раз<b>${esc(prevTop(e.prev))}</b></div></div>` +
+      `<button class="ex-prev prevbtn" data-act="prev-open" aria-label="Показать прошлую тренировку">Прошлый раз<b>${esc(prevTop(e.prev))}</b></button></div>` +
       `<div class="dashes" aria-hidden="true">${dash}</div>` +
       `<div class="tr th"><span>№</span><span>Вес, кг</span><span>Повт.</span><span></span></div>` +
       e.sets.map((x, k) => `<div class="tr"><span class="n">${k + 1}</span><b>${fmtNum(x.weight)}</b><b>${x.reps}</b>` +
@@ -1044,6 +1081,7 @@ function viewSession() {
       `<button class="rmex" data-act="rm-sex" data-name="${esc(e.name)}">Убрать упражнение</button></div>`;
   }).join("");
   h += `<button class="finish" data-act="finish">Завершить тренировку</button>`;
+  if (S.prevPop && s.exercises[S.openEx]) h += prevPop(s.exercises[S.openEx]);
   return h;
 }
 
@@ -1311,7 +1349,7 @@ document.addEventListener("pointercancel", () => { dragging = false; });
 /* ---------- отрисовка ---------- */
 function render() {
   if (S.view === "session" && !S.session) S.view = "list";
-  const key = [S.tab, S.view, S.sheet || "", S.zoom ? "z" : "", S.themeSheet ? "t" : "", S.hedit || "", S.wmenu || "", S.dayKey || "", S.gsheet ? "g" : "", S.gdone || "", S.set || "", S.exportSheet ? "x" : "", S.bhf || "", S.wedit || "", S.bedit || "", S.kv, S.kvp ? (S.kvp.sel ? "s" : S.kvp.scan ? "c" : S.kvp.manual ? "m" : "p") : ""].join(":");
+  const key = [S.tab, S.view, S.sheet || "", S.zoom ? "z" : "", S.themeSheet ? "t" : "", S.hedit || "", S.wmenu || "", S.dayKey || "", S.gsheet ? "g" : "", S.gdone || "", S.kvinfo ? "i" : "", S.prevPop ? "p" : "", S.set || "", S.exportSheet ? "x" : "", S.bhf || "", S.wedit || "", S.bedit || "", S.kv, S.kvp ? (S.kvp.sel ? "s" : S.kvp.scan ? "c" : S.kvp.manual ? "m" : "p") : ""].join(":");
   const y = key === S.lastKey ? window.scrollY : 0;
   S.lastKey = key;
   let h;
@@ -1332,7 +1370,7 @@ function render() {
 }
 function goBack() {
   if (S.tab === "settings" && S.set !== "home") { S.set = "home"; render(); return; }
-  if (S.tab === "kbzhu") { if (S.kvp) { kvClose(); return; } if (S.gsheet) { S.gsheet = null; render(); return; } if (S.wedit) { S.wedit = null; render(); return; } if (S.gdone) { S.gdone = null; render(); return; } if (S.kv === "biohist") { S.kv = "bio"; render(); return; } if (S.kv !== "home") { S.kv = "home"; S.bedit = null; render(); } return; }
+  if (S.tab === "kbzhu") { if (S.kvinfo) { S.kvinfo = false; render(); return; } if (S.kvp) { kvClose(); return; } if (S.gsheet) { S.gsheet = null; render(); return; } if (S.wedit) { S.wedit = null; render(); return; } if (S.gdone) { S.gdone = null; render(); return; } if (S.kv === "biohist") { S.kv = "bio"; render(); return; } if (S.kv !== "home") { S.kv = "home"; S.bedit = null; render(); } return; }
   if (S.hedit && !S.zoom) {
     S.hedit = null;
     if (S.hfrom) { S.hfrom = null; S.tab = "diary"; S.view = "day"; }
@@ -1340,7 +1378,8 @@ function goBack() {
   }
   if (S.tab === "history" || S.tab === "progress") { showTab("hub"); return; }
   if (S.tab === "hub") { showTab("diary"); return; }
-  if (S.zoom) S.zoom = null;
+  if (S.prevPop) S.prevPop = false;
+  else if (S.zoom) S.zoom = null;
   else if (S.sheet) S.sheet = null;
   else if (S.wmenu) S.wmenu = null;
   else if (S.view === "pick") S.view = S.pickFor === "session" ? "session" : "edit";
@@ -1348,6 +1387,7 @@ function goBack() {
   render();
 }
 async function showTab(t) {
+  if (t === "kbzhu" && S.tab === "kbzhu") { S.kv = "home"; S.gsheet = null; S.wedit = null; S.gdone = null; S.bedit = null; S.kvinfo = false; }
   if (typeof stopScan === "function") stopScan(); if (S.kvp) S.kvp = null;
   S.tab = t; S.sheet = null; S.zoom = null; S.themeSheet = false; S.exportSheet = false; S.set = "home"; S.hedit = null;
   try {
@@ -1405,7 +1445,7 @@ function viewSettings() {
     srow("palette", "Оформление", cur[1], "theme-open") +
     srow("bell", "Уведомления", n.on && (n.w.on || n.b.on) ? "Включены" : "Напоминания о тренировках и замерах", "set-go\" data-to=\"notif") + "</div>" +
     '<div class="sgl">Данные и приложение</div><div class="sgroup">' +
-    srow("cloud", "Резервное копирование", TGW ? (SM.dirty ? "Облако Telegram · ждёт отправки" : "Облако Telegram · синхронизировано") : "Облако и восстановление из файла", "set-go\" data-to=\"backup") +
+    srow("cloud", "Резервное копирование", syncOn() ? (GH ? "GitHub" : "Облако Telegram") + (SM.err ? " · ошибка" : SM.dirty ? " · ждёт отправки" : " · синхронизировано") : "Не включено: облако и файл", "set-go\" data-to=\"backup") +
     srow("download", "Экспорт данных", "Сохранить копию всех данных", "export-open") +
     srow("info", "О приложении", "Версия " + APP_VERSION, "set-go\" data-to=\"about") + "</div>";
   if (S.themeSheet) {
@@ -1448,6 +1488,16 @@ function viewAbout() {
 const actions = {
   "set-go": b => { S.set = b.dataset.to; render(); },
   "sync-now": () => syncNow(true),
+  "gh-on": async () => {
+    const tok = (($("#gh-tok") || {}).value || "").trim();
+    if (!/^(ghp_|github_pat_|gho_|ghu_)?[A-Za-z0-9_]{20,}$/.test(tok)) return note("Вставь токен целиком (он начинается с ghp_).");
+    GH = { token: tok, id: null };
+    try { await ghApi("/gists?per_page=1"); }
+    catch (e) { GH = null; return note(e.message); }
+    ghSave(); SM.rev = 0; SM.dirty = true; smSave(); ghLast = null;
+    render(); await syncNow(true);
+  },
+  "gh-off": async () => { if (await ask("Отключить GitHub на этом устройстве?")) { GH = null; ghSave(); ghLast = null; render(); } },
   "cl-push": async () => { if (await ask("Заменить облачную копию данными с этого устройства?")) cloudForcePush(); },
   "cl-pull": async () => { if (await ask("Заменить данные на этом устройстве данными из облака?")) cloudForcePull(); },
   "imp-pick": () => { const f = $("#imp-file"); if (f) f.click(); },
@@ -1482,6 +1532,21 @@ const actions = {
   "wk-next": () => { if (S.weekOff > 0) S.weekOff--; render(); },
   wmenu: b => { S.wmenu = b.dataset.id; render(); },
   "wmenu-close": () => { S.wmenu = null; render(); },
+  "wm-ren": async () => {
+    const w = D.workouts.find(x => x.id === S.wmenu); if (!w) return;
+    const v = await promptText("Название тренировки", w.name); if (v == null) return;
+    const n = cleanTitle(v); if (!n) return note("Название не может быть пустым");
+    if (D.workouts.some(x => !x.archived && x.id !== w.id && x.name === n)) return note("Тренировка с таким названием уже есть");
+    w.name = n; D.sessions.forEach(x => { if (x.workoutId === w.id && x.finishedAt == null) x.name = n; });
+    persist(); S.wmenu = null; await Promise.all([loadWorkouts(), loadSession()]).catch(() => {}); render();
+  },
+  "ren-s": async () => {
+    const s = activeSession(); if (!s) return;
+    const v = await promptText("Название тренировки", s.name); if (v == null) return;
+    const n = cleanTitle(v); if (!n) return note("Название не может быть пустым");
+    s.name = n; const w = D.workouts.find(x => x.id === s.workoutId); if (w && !D.workouts.some(x => !x.archived && x.id !== w.id && x.name === n)) w.name = n;
+    persist(); await Promise.all([loadWorkouts(), loadSession()]).catch(() => {}); render();
+  },
   "wm-edit": () => { S.sheet = S.wmenu; S.wmenu = null; actions["edit-w"](); },
   "wm-del": () => { S.sheet = S.wmenu; S.draft = null; S.wmenu = null; actions["del-w"](); },
   "drop-toggle": () => {
@@ -1709,7 +1774,13 @@ document.addEventListener("change", e => {
    Продукты: свои + Open Food Facts (штрихкод и поиск по названию).
    ===================================================================== */
 const N = () => D.nutri || (D.nutri = { prods: [], log: [], goal: "gain", kcalGoal: 0 });
-const mac = (p, g) => ({ k: p.k * g / 100, b: p.b * g / 100, j: p.j * g / 100, u: p.u * g / 100 });
+const KC = (b, j, u) => 4 * b + 9 * j + 4 * u;   // ккал = 4·Б + 9·Ж + 4·У
+const mac = (p, g) => { const b = p.b * g / 100, j = p.j * g / 100, u = p.u * g / 100; return { k: (b || j || u) ? KC(b, j, u) : p.k * g / 100, b, j, u }; };
+function fixNutri() {
+  const n = D.nutri; if (!n) return;
+  for (const p of n.prods || []) if (p.b || p.j || p.u) p.k = r1(KC(p.b || 0, p.j || 0, p.u || 0));
+  for (const x of n.log || []) if (x.b || x.j || x.u) x.k = KC(x.b || 0, x.j || 0, x.u || 0);
+}
 const sumM = a => a.reduce((s, x) => ({ k: s.k + x.k, b: s.b + x.b, j: s.j + x.j, u: s.u + x.u }), { k: 0, b: 0, j: 0, u: 0 });
 const per100 = (m, g) => ({ k: m.k / g * 100, b: m.b / g * 100, j: m.j / g * 100, u: m.u / g * 100 });
 const r1 = v => Math.round(v * 10) / 10;
@@ -1734,7 +1805,7 @@ const offMap = p => {
   if (k == null) { const kj = numOrNull(n.energy_100g); if (kj != null) k = kj / 4.184; }
   const name = String(p.product_name_ru || p.product_name || "").trim();
   if (!name) return null;
-  if (k == null && b != null && j != null && u != null) k = 4 * b + 9 * j + 4 * u;
+  if (b != null && j != null && u != null) k = KC(b, j, u);
   if (k == null && b == null && j == null && u == null) return { name: name.slice(0, 70), k: 0, b: 0, j: 0, u: 0, code: p.code || "", empty: true };
   const brand = p.brands ? " (" + String(p.brands).split(",")[0] + ")" : "";
   return { name: (name + brand).slice(0, 70), k: r1(k || 0), b: r1(b || 0), j: r1(j || 0), u: r1(u || 0), code: p.code || "", partial: k == null || b == null || j == null || u == null };
@@ -1940,7 +2011,7 @@ function viewKbzhu() {
       b("tips", "trend", "Советы", "Вес, недельная сводка и рекомендации") +
       b("bio", "body", "Биометрические данные", "Рост, вес, замеры, цель и её прогресс");
   }
-  return h + (S.kvp ? viewPicker() : "") + (S.gsheet ? viewGoalSheet() : "") + (S.wedit ? viewWEdit() : "") + (S.gdone ? viewGDone() : "");
+  return h + (S.kvp ? viewPicker() : "") + (S.gsheet ? viewGoalSheet() : "") + (S.wedit ? viewWEdit() : "") + (S.gdone ? viewGDone() : "") + (S.kvinfo ? viewKvInfo() : "");
 }
 
 /* калькулятор: сырое → готовое */
@@ -2004,6 +2075,23 @@ function recentFoods() {
   }
   return out;
 }
+function viewKvInfo() {
+  const L = N().log, x = L[L.length - 1], f = v => fmtNum(Math.round(v * 100) / 100);
+  let ex = "";
+  if (x && x.g > 0) {
+    const b1 = x.b / x.g * 100, j1 = x.j / x.g * 100, u1 = x.u / x.g * 100;
+    ex = `<div class="card"><div class="b">Пример: твоя последняя запись</div><div class="sub" style="line-height:1.6">${esc(x.name)}, ${f(x.g)} г<br>На 100 г: Б ${f(b1)}, Ж ${f(j1)}, У ${f(u1)}<br>Б = ${f(b1)} × ${f(x.g)} ÷ 100 = <b>${f(x.b)} г</b><br>Ж = ${f(j1)} × ${f(x.g)} ÷ 100 = <b>${f(x.j)} г</b><br>У = ${f(u1)} × ${f(x.g)} ÷ 100 = <b>${f(x.u)} г</b><br>Ккал = 4 × ${f(x.b)} + 9 × ${f(x.j)} + 4 × ${f(x.u)} = <b>${f(KC(x.b, x.j, x.u))}</b></div></div>`;
+  }
+  return '<div class="scrim" data-act="kv-info-close"></div><div class="sheet" role="dialog" aria-label="Как считаются КБЖУ"><div class="sheet-in"><div class="grab"></div>' +
+    '<div class="sheet-h" style="margin-bottom:8px"><div class="h1">Как считаются КБЖУ</div><button class="link" data-act="kv-info-close">Закрыть</button></div>' +
+    '<div class="card"><div class="sub" style="line-height:1.65">' +
+    '<b>1. Порция.</b> Если на 100 г в продукте Б, Ж, У граммов, а ты съел m граммов:<br>Б = Б₁₀₀ × m ÷ 100, Ж = Ж₁₀₀ × m ÷ 100, У = У₁₀₀ × m ÷ 100<br><br>' +
+    '<b>2. Калории.</b> Считаются из белков, жиров и углеводов, поэтому всегда сходятся с ними:<br>Ккал = 4 × Б + 9 × Ж + 4 × У<br><br>' +
+    '<b>3. День.</b> Итог за день — сумма всех записей: Σ Б, Σ Ж, Σ У, Σ Ккал.<br><br>' +
+    '<b>4. Готовое блюдо.</b> Суммируешь сырые ингредиенты и делишь на вес готового блюда M:<br>на 100 г = Σ ÷ M × 100<br>порция = на 100 г × порция ÷ 100<br><br>' +
+    '<b>5. Цели в кольце.</b> Б = 1,8 × вес тела, Ж = 0,27 × Ккал ÷ 9, У = (Ккал − 4 × Б − 9 × Ж) ÷ 4.</div></div>' + ex +
+    '<div class="sub" style="margin:8px 4px">Ккал на упаковке считаются сложнее (клетчатка, спирты), поэтому могут отличаться от формулы на несколько процентов.</div></div></div>';
+}
 function viewLog() {
   const d = S.kvDay || (S.kvDay = today()), L = dayLog(d), tot = sumM(L), g = N().kcalGoal, mg = macroGoals(g);
   const dt = new Date(d + "T00:00:00");
@@ -2023,6 +2111,7 @@ function viewLog() {
       `<button class="ico" data-act="kv-del" data-id="${x.id}" aria-label="Удалить ${esc(x.name)}">${icon("x", 16)}</button></div>`).join("");
     h += "</div>";
   }
+  h += `<button class="btn soft" data-act="kv-info">Как считаются КБЖУ</button>`;
   const rec = recentFoods();
   if (rec.length) {
     h += '<div class="sec"><h2>Недавние записи</h2></div>' + rec.map((x, i) =>
@@ -2056,8 +2145,9 @@ function viewPicker() {
   } else if (k.manual) {
     const dr = k.draft || {}, val = x => (dr[x] != null && dr[x] !== 0 ? esc(String(dr[x]).replace(".", ",")) : "");
     h += head("Свой продукт (на 100 г)") + `<label class="field-l" for="kv-mn">Название</label><input id="kv-mn" placeholder="Название" value="${esc(dr.name || "")}">` +
-      `<div class="row"><div class="stepper"><label class="field-l" for="kv-mk">Ккал</label><input id="kv-mk" inputmode="decimal" value="${val("k")}"></div><div class="stepper"><label class="field-l" for="kv-mb">Белки</label><input id="kv-mb" inputmode="decimal" value="${val("b")}"></div></div>` +
+      `<div class="row"><div class="stepper"><label class="field-l" for="kv-mk">Ккал (считаются сами)</label><input id="kv-mk" inputmode="decimal" value="${val("k")}"></div><div class="stepper"><label class="field-l" for="kv-mb">Белки</label><input id="kv-mb" inputmode="decimal" value="${val("b")}"></div></div>` +
       `<div class="row"><div class="stepper"><label class="field-l" for="kv-mj">Жиры</label><input id="kv-mj" inputmode="decimal" value="${val("j")}"></div><div class="stepper"><label class="field-l" for="kv-mu">Углеводы</label><input id="kv-mu" inputmode="decimal" value="${val("u")}"></div></div>` +
+      `<div id="kv-mh" class="sub" style="margin-top:8px">Ккал = 4·Б + 9·Ж + 4·У. Заполни белки, жиры и углеводы на 100 г.</div>` +
       (k.msg ? `<div class="warn" style="margin-top:10px">${esc(k.msg)}</div>` : "") + '<button class="btn primary" data-act="kv-manual-ok">Сохранить</button>';
   } else {
     h += head("Выбери продукт") +
@@ -2324,6 +2414,10 @@ function kvAddEntry(p, g) {
   else { const m = mac(p, g); N().log.push({ id: uid8(), day: S.kvDay || today(), meal: S.kvp.meal || autoMeal(), name: p.name, g, ...m }); persist(); }
 }
 Object.assign(actions, {
+  "prev-open": () => { S.prevPop = true; render(); },
+  "prev-close": () => { S.prevPop = false; render(); },
+  "kv-info": () => { S.kvinfo = true; render(); },
+  "kv-info-close": () => { S.kvinfo = false; render(); },
   "kv-go": b => { S.kv = b.dataset.to; render(); },
   "kv-pick": b => kvOpen(b.dataset.ctx, b.dataset.meal),
   "kv-close": kvClose,
@@ -2357,7 +2451,8 @@ Object.assign(actions, {
   "kv-manual": () => { S.kvp.manual = true; S.kvp.draft = null; S.kvp.msg = ""; render(); },
   "kv-manual-ok": () => {
     const name = cleanTitle(($("#kv-mn") || {}).value || ""), v = ["k", "b", "j", "u"].map(x => num("kv-m" + x) || 0);
-    if (!name || !(v[0] >= 0) || !($("#kv-mk") || {}).value) return note("Укажи название и калории");
+    if (!name || !(v[0] || v[1] || v[2] || v[3])) return note("Укажи название и хотя бы БЖУ или калории");
+    if (v[1] || v[2] || v[3]) v[0] = r1(KC(v[1], v[2], v[3]));
     S.kvp.sel = keepProd({ name, k: v[0], b: v[1], j: v[2], u: v[3], code: (S.kvp.draft && S.kvp.draft.code) || S.kvp.code || "" }); S.kvp.manual = false; S.kvp.draft = null; render();
   },
   "kv-rm": b => { S.calc.rows.splice(+b.dataset.i, 1); render(); },
@@ -2448,6 +2543,10 @@ Object.assign(actions, {
 document.addEventListener("input", e => {
   const t = e.target;
   if (t.id === "kv-q" && S.kvp) { S.kvp.q = t.value; $("#kv-list").innerHTML = foodPickList(); }
+  else if (/^kv-m[bju]$/.test(t.id) && S.kvp && S.kvp.manual) {
+    const b = num("kv-mb") || 0, j = num("kv-mj") || 0, u = num("kv-mu") || 0, h = $("#kv-mh"), k = $("#kv-mk");
+    if (b || j || u) { const kc = r1(KC(b, j, u)); if (k) k.value = String(kc).replace(".", ","); if (h) h.textContent = `4·${fmtNum(b)} + 9·${fmtNum(j)} + 4·${fmtNum(u)} = ${fmtNum(kc)} ккал на 100 г`; }
+  }
   else if (t.id === "kv-dn") S.calc.name = t.value;
   else if (t.id === "kv-cooked" || t.id === "kv-portion") { S.calc[t.id === "kv-cooked" ? "cooked" : "portion"] = t.value; $("#kv-res").innerHTML = calcRes(); }
   else if (t.id === "kv-g" && S.kvp && S.kvp.sel) { const g = parseNum(t.value); $("#kv-gr").textContent = g > 0 ? macTxt(mac(S.kvp.sel, g)) : ""; }
@@ -2460,6 +2559,44 @@ document.addEventListener("input", e => {
 /* ---------- Синхронизация: облако Telegram (по аккаунту) ---------- */
 ICON.cloud = '<path d="M7 18h10.5a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.6 9.2 4.5 4.5 0 0 0 7 18z"/>';
 const TGW = (() => { try { const w = window.Telegram && Telegram.WebApp; return w && w.CloudStorage && w.isVersionAtLeast && w.isVersionAtLeast("6.9") ? w : null; } catch (e) { return null; } })();
+const GH_KEY = "gym-gh-v1", GH_DESC = "gym-diary-sync", GH_FILE = "gym-diary.json";
+let GH = null; try { const v = JSON.parse(localStorage.getItem(GH_KEY) || "null"); if (v && v.token) GH = v; } catch (e) {}
+const ghSave = () => { try { if (GH) localStorage.setItem(GH_KEY, JSON.stringify(GH)); else localStorage.removeItem(GH_KEY); } catch (e) {} };
+const syncOn = () => !!(GH || TGW);
+async function ghApi(path, opt = {}) {
+  const ac = new AbortController(), t = setTimeout(() => ac.abort(), 20000);
+  try {
+    const r = await fetch("https://api.github.com" + path, Object.assign({}, opt, { signal: ac.signal, headers: { Accept: "application/vnd.github+json", Authorization: "Bearer " + GH.token, "Content-Type": "application/json" } }));
+    if (r.status === 401) { const e = new Error("GitHub не принял токен. Создай новый и подключи заново."); e.status = 401; throw e; }
+    if (r.status === 403) { const e = new Error("GitHub отказал в доступе: у токена нет права «gist» или превышен лимит запросов."); e.status = 403; throw e; }
+    if (!r.ok) { const e = new Error("GitHub вернул ошибку " + r.status); e.status = r.status; throw e; }
+    return await r.json();
+  } catch (e) {
+    if (e.name === "AbortError") throw new Error("GitHub не ответил вовремя");
+    if (e instanceof TypeError) throw new Error("Нет связи с GitHub");
+    throw e;
+  } finally { clearTimeout(t); }
+}
+let ghLast = null;
+async function ghFindId() {
+  for (let pg = 1; pg <= 5; pg++) {
+    const l = await ghApi("/gists?per_page=100&page=" + pg);
+    const g = l.find(x => x.description === GH_DESC && x.files && x.files[GH_FILE]);
+    if (g) return g.id;
+    if (l.length < 100) break;
+  }
+  return null;
+}
+async function ghGet() {
+  if (!GH.id) { GH.id = await ghFindId(); if (!GH.id) return null; ghSave(); }
+  let g;
+  try { g = await ghApi("/gists/" + GH.id); }
+  catch (e) { if (e.status === 404) { GH.id = null; ghSave(); return null; } throw e; }
+  const f = g.files && g.files[GH_FILE]; if (!f) return null;
+  let txt = f.content;
+  if (f.truncated || txt == null) { const r = await fetch(f.raw_url); if (!r.ok) throw new Error("Не удалось скачать копию с GitHub"); txt = await r.text(); }
+  try { const o = JSON.parse(txt); return o && typeof o.rev === "number" && o.b64 ? o : null; } catch (e) { return null; }
+}
 const SM_KEY = "gym-sync-v1";
 let SM = { rev: 0, dirty: true, at: 0, err: "" };
 let editCount = 0, syncing = false, syncAgain = false, upTimer = null, bootDone = false;
@@ -2470,7 +2607,7 @@ function smLoad(hadData) {
 function smSave() { try { localStorage.setItem(SM_KEY, JSON.stringify(SM)); } catch (e) {} }
 function syncDirty() {
   editCount++; SM.dirty = true; smSave();
-  if (!TGW) return;
+  if (!syncOn()) return;
   clearTimeout(upTimer); upTimer = setTimeout(() => syncNow(false), 3000);
 }
 const csCall = (m, ...a) => new Promise((res, rej) => {
@@ -2495,8 +2632,11 @@ async function unpackStr(b64, z) {
   return new TextDecoder().decode(bytes);
 }
 const CHUNK = 3800;
-async function cloudMeta() { const v = await csCall("getItem", "gd_meta"); if (!v) return null; try { const m = JSON.parse(v); return m && typeof m.rev === "number" && m.n >= 0 ? m : null; } catch (e) { return null; } }
+async function cloudMeta() {
+  if (GH) { ghLast = await ghGet(); return ghLast ? { rev: ghLast.rev, n: 1, z: ghLast.z } : null; }
+  const v = await csCall("getItem", "gd_meta"); if (!v) return null; try { const m = JSON.parse(v); return m && typeof m.rev === "number" && m.n >= 0 ? m : null; } catch (e) { return null; } }
 async function cloudRead() {
+  if (GH) { const o = ghLast || await ghGet(); if (!o) return null; return { meta: { rev: o.rev, n: 1, z: o.z }, data: JSON.parse(await unpackStr(o.b64, o.z)) }; }
   const m = await cloudMeta(); if (!m) return null;
   const keys = Array.from({ length: m.n }, (_, i) => "gd_" + i);
   const o = m.n ? await csCall("getItems", keys) : {};
@@ -2506,6 +2646,14 @@ async function cloudRead() {
 async function cloudWrite(prevN) {
   const e0 = editCount, json = JSON.stringify(D, (k, v) => k === "photo" ? null : v);
   const { z, b64 } = await packStr(json), n = Math.ceil(b64.length / CHUNK);
+  if (GH) {
+    const rev = Math.max(Date.now(), (SM.rev || 0) + 1);
+    const body = JSON.stringify({ description: GH_DESC, public: false, files: { [GH_FILE]: { content: JSON.stringify({ v: 1, rev, z, b64 }) } } });
+    if (!GH.id) { const g = await ghApi("/gists", { method: "POST", body }); GH.id = g.id; ghSave(); }
+    else await ghApi("/gists/" + GH.id, { method: "PATCH", body });
+    ghLast = null;
+    return { rev, clean: e0 === editCount };
+  }
   if (n > 900) throw new Error("Данных слишком много для облака Telegram");
   for (let i = 0; i < n; i++) await csCall("setItem", "gd_" + i, b64.slice(i * CHUNK, (i + 1) * CHUNK));
   const rev = Math.max(Date.now(), (SM.rev || 0) + 1);
@@ -2554,7 +2702,7 @@ function mergeDocs(L, C) {
   return M;
 }
 async function syncNow(manual) {
-  if (!TGW) { if (manual) note("Облако Telegram работает только внутри Telegram (версия 6.9 и новее). Здесь пользуйся экспортом и импортом файла."); return { ok: false }; }
+  if (!syncOn()) { if (manual) note("Синхронизация не включена: приложение открыто не в Telegram. Подключи GitHub в этом же разделе или пользуйся файлом."); return { ok: false }; }
   if (syncing) { syncAgain = true; return { ok: false, busy: true }; }
   syncing = true; let replaced = false, ok = false;
   try {
@@ -2608,18 +2756,30 @@ async function importText(t) {
 }
 const fmtSyncAt = ms => ms ? new Date(ms).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "ещё не было";
 function viewBackup() {
+  const tg = window.Telegram && Telegram.WebApp, inTg = !!(tg && tg.initData);
   let h = "";
-  if (TGW) {
-    h += '<div class="sgroup"><div class="srow flat"><span class="si">' + icon("cloud", 22) + '</span><span class="g"><b>Облако Telegram: включено</b><small>Последняя синхронизация: ' + fmtSyncAt(SM.at) + (SM.dirty ? " · есть несохранённые изменения" : "") + "</small></span></div>" +
+  if (syncOn()) {
+    h += '<div class="sgroup"><div class="srow flat"><span class="si">' + icon("cloud", 22) + '</span><span class="g"><b>Синхронизация включена: ' + (GH ? "GitHub" : "облако Telegram") + '</b><small>Последняя: ' + fmtSyncAt(SM.at) + (SM.dirty ? " · есть неотправленные изменения" : "") + "</small></span></div>" +
       (SM.err ? '<div class="srow flat"><span class="g"><b>Ошибка</b><small>' + esc(SM.err) + "</small></span></div>" : "") + "</div>" +
       '<button class="btn primary" data-act="sync-now">Синхронизировать сейчас</button>' +
-      '<div class="sub" style="margin:10px 4px">Данные сохраняются в облаке автоматически через несколько секунд после изменения и подгружаются при открытии приложения. Войди в тот же аккаунт Telegram на другом устройстве и открой этого бота: данные будут там.</div>' +
+      '<div class="sub" style="margin:10px 4px">Изменения уходят в облако через несколько секунд, а при открытии приложения подтягиваются оттуда. ' + (GH ? "На другом устройстве подключи тот же токен GitHub." : "На другом устройстве открой этого же бота под тем же аккаунтом Telegram.") + '</div>' +
       '<div class="sgl">Принудительно</div><div class="sgroup">' +
       '<button class="srow" data-act="cl-push"><span class="g"><b>Отправить в облако с этого устройства</b><small>Облачная копия будет заменена</small></span>' + icon("right", 18) + "</button>" +
       '<button class="srow" data-act="cl-pull"><span class="g"><b>Загрузить из облака сюда</b><small>Данные на этом устройстве будут заменены</small></span>' + icon("right", 18) + "</button></div>";
   } else {
-    h += '<div class="sgroup"><div class="srow flat"><span class="si">' + icon("cloud", 22) + '</span><span class="g"><b>Облако Telegram недоступно</b><small>Приложение открыто не в Telegram или версия Telegram старше 6.9. Автосинхронизация работает только внутри Telegram.</small></span></div></div>';
+    h += '<div class="sgroup"><div class="srow flat"><span class="si">' + icon("cloud", 22) + '</span><span class="g"><b>Синхронизация не включена</b><small>' +
+      (inTg ? "Эта версия Telegram слишком старая для облака (нужна 6.9 или новее). Обнови Telegram или подключи GitHub ниже." : "Приложение открыто в обычном браузере, а облако Telegram работает только внутри Telegram. Открой приложение через бота или подключи GitHub ниже.") + "</small></span></div></div>";
   }
+  h += '<div class="sgl">GitHub (работает и в браузере, и в Telegram)</div>';
+  if (GH) {
+    h += '<div class="sgroup"><button class="srow" data-act="gh-off"><span class="g"><b>Отключить GitHub</b><small>Токен будет удалён с этого устройства. Копия в gist останется.</small></span>' + icon("right", 18) + "</button></div>";
+  } else {
+    h += '<div class="card"><div class="sub">Данные хранятся в приватном gist твоего аккаунта GitHub. Один раз создай токен и вставь его на каждом устройстве (телефон, компьютер).</div>' +
+      '<ol class="sub" style="margin:8px 0 0;padding-left:20px"><li>Открой github.com/settings/tokens/new (классический токен).</li><li>Название любое, срок «No expiration», поставь галочку только у <b>gist</b>.</li><li>Нажми «Generate token», скопируй токен (начинается с ghp_) и вставь ниже.</li></ol>' +
+      '<input id="gh-tok" type="password" placeholder="Токен ghp_…" autocomplete="off" style="margin-top:10px"><button class="btn primary" data-act="gh-on">Подключить</button>' +
+      '<div class="sub" style="margin-top:8px">Токен лежит только на этом устройстве и даёт доступ лишь к твоим gist.</div></div>';
+  }
+  h += '<div class="sub" style="margin:8px 4px">Версия: ' + esc(APP_VERSION) + (inTg ? " · Telegram " + esc(String(tg.version || "?")) + ", " + esc(String(tg.platform || "")) : " · обычный браузер") + "</div>";
   h += '<div class="sgl">Файл</div><div class="card"><div class="sub">Перенос вручную: сделай копию в «Экспорт данных» и восстанови её здесь.</div>' +
     '<button class="btn soft" data-act="imp-pick">Восстановить из файла</button>' +
     '<input id="imp-file" type="file" accept=".json,.txt,application/json,text/plain" class="vh" tabindex="-1">' +
@@ -2637,7 +2797,8 @@ try {
   }
 } catch (e) {}
 
-document.addEventListener("visibilitychange", () => { if (bootDone && TGW) syncNow(false); });
+document.addEventListener("visibilitychange", () => { if (bootDone && syncOn()) syncNow(false); });
+window.addEventListener("online", () => { if (bootDone && syncOn()) syncNow(false); });
 
 /* ---------- старт ---------- */
 (async () => {
