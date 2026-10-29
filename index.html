@@ -398,6 +398,16 @@
   .exitem:last-child { border-bottom: 0; }
   .fatseg { flex-wrap: wrap; }
   .fatseg button { flex: 1 1 30%; min-width: 0; padding: 0 4px; font-size: 13px; line-height: 1.1; white-space: normal; }
+  .ach { display: flex; gap: 12px; align-items: center; padding: 12px; margin-bottom: 8px; border-radius: var(--r-card); background: var(--card); }
+  .ach .ai { flex: none; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--line); color: var(--muted); }
+  .ach.on .ai { background: var(--accent); color: var(--on-accent, #fff); }
+  .ach.off { opacity: .85 } .ach .g { flex: 1; min-width: 0 } .ach .n { font-weight: 700 }
+  .pbar { height: 6px; border-radius: 3px; background: var(--line); margin-top: 6px; overflow: hidden } .pbar i { display: block; height: 100%; background: var(--accent); border-radius: 3px }
+  .streak { display: flex; gap: 12px; align-items: center } .streak .fl { color: var(--muted); display: flex } .streak .fl.on { color: var(--accent) }
+  .chat { max-height: 42vh; overflow-y: auto; padding: 4px; display: flex; flex-direction: column; gap: 6px }
+  .msg { display: flex; flex-direction: column; align-items: flex-start; max-width: 85%; } .msg.me { align-self: flex-end; align-items: flex-end }
+  .msg .bub { padding: 8px 12px; border-radius: 14px; background: var(--line); overflow-wrap: anywhere; white-space: pre-wrap } .msg.me .bub { background: var(--accent); color: var(--on-accent, #fff) }
+  .msg small { font-size: 11px; color: var(--muted); margin: 2px 4px 0 }
 </style>
 </head>
 <body>
@@ -433,12 +443,15 @@ const round1 = v => Math.round(v * 10) / 10;
 const D = { workouts: [], bodyweight: [], sessions: [] };   // workouts: {id,name,exercises:[{name,photo}],archived}
                                                             // sessions: {id,workoutId,name,day,startedAt,finishedAt,exercises,sets:[{id,exercise,weight,reps}]}
 const P = { mode: "loading" };
+let DV = 0;   // версия данных (сбрасывает кэш статистики)
 const KEY = "gym-diary-v1";
 function persist() {
   if (P.mode !== "local") return;
+  DV++;
   try { localStorage.setItem(KEY, JSON.stringify(D)); }
   catch (e) { note("Не удалось сохранить данные: память заполнена. Удали лишние фото."); return; }
   syncDirty();
+  try { prgSchedule(); } catch (e) {}
 }
 const saveApp = persist;
 const saveSession = persist;
@@ -892,7 +905,7 @@ function viewHub() {
     `<button class="wcard" data-act="hub" data-to="coach" style="min-height:76px">${icon("coach", 26)}<span style="flex:1;min-width:0"><span class="t" style="display:block">Тренер</span><span class="x" style="display:block">Когда повысить вес, что отстаёт, когда разгрузиться</span></span>${icon("right")}</button>`;
 }
 function viewList() {
-  let h = memWarn() + `<div class="kick" style="margin-left:0">${kickDate()}${weekNav()}</div>` + weekStrip(true) + remBanners();
+  let h = memWarn() + `<div class="kick" style="margin-left:0">${kickDate()}${weekNav()}</div>` + weekStrip(true) + remBanners() + viewForYou();
   h += `<button class="chipbtn" data-act="open-hub" style="margin-bottom:10px">${icon("trend", 18)} Прогресс ${icon("right", 16)}</button>`;
   if (S.session) {
     h += `<button class="banner" data-act="resume">${icon("clock", 22)}<span class="grow"><b>Идёт тренировка</b><span>${esc(S.session.name)}</span></span>` +
@@ -1393,8 +1406,9 @@ function render() {
   if (S.tab === "progress") drawProgressChart();
 }
 function goBack() {
+  if (S.tab === "settings" && S.set === "friends" && FR.open) { frCloseChat(); render(); return; }
   if (S.tab === "settings" && S.set !== "home") { S.set = "home"; render(); return; }
-  if (S.tab === "kbzhu") { if (S.kvinfo) { S.kvinfo = false; render(); return; } if (S.normSheet) { S.normSheet = false; render(); return; } if (S.eat) { S.eat = false; render(); return; } if (S.kvp) { kvClose(); return; } if (S.gsheet) { S.gsheet = null; render(); return; } if (S.wedit) { S.wedit = null; render(); return; } if (S.gdone) { S.gdone = null; render(); return; } if (S.kv === "biohist") { S.kv = "bio"; render(); return; } if (S.kv !== "home") { S.kv = "home"; S.bedit = null; render(); } return; }
+  if (S.tab === "kbzhu") { if (S.retSheet) { S.retSheet = false; render(); return; } if (S.kvinfo) { S.kvinfo = false; render(); return; } if (S.normSheet) { S.normSheet = false; render(); return; } if (S.eat) { S.eat = false; render(); return; } if (S.kvp) { kvClose(); return; } if (S.gsheet) { S.gsheet = null; render(); return; } if (S.wedit) { S.wedit = null; render(); return; } if (S.gdone) { S.gdone = null; render(); return; } if (S.kv === "biohist") { S.kv = "bio"; render(); return; } if (S.kv !== "home") { S.kv = "home"; S.bedit = null; render(); } return; }
   if (S.hedit && !S.zoom) {
     S.hedit = null;
     if (S.hfrom) { S.hfrom = null; S.tab = "diary"; S.view = "day"; }
@@ -1433,7 +1447,7 @@ document.querySelectorAll(".tabs button").forEach(b => { b.onclick = () => showT
 
 /* ---------- действия ---------- */
 const nextName = () => { const L = "АБВГДЕЖЗИК"; const n = (S.workouts || []).length; return "Тренировка " + (L[n] || n + 1); };
-const APP_VERSION = "1.4.1";
+const APP_VERSION = "1.5.0";
 ICON.palette = '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/>';
 ICON.bell = '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"/>';
 ICON.download = '<path d="M6 3h8l4 4v14H6zM14 3v4h4M12 10v6M9.5 13.5L12 16l2.5-2.5"/>';
@@ -1445,6 +1459,7 @@ const WDN = [["ПН", 1], ["ВТ", 2], ["СР", 3], ["ЧТ", 4], ["ПТ", 5], ["
 const nowHM = () => { const d = new Date(); return pad2(d.getHours()) + ":" + pad2(d.getMinutes()); };
 function dueReminders() {
   const n = NT(), out = [], t = today(), dis = SETD().dis || {};
+  extraRem(out);
   if (!n.on) return out;
   if (n.w.on && n.w.days.includes(new Date().getDay()) && nowHM() >= n.w.time && dis.w !== t && !D.sessions.some(x => x.day === t))
     out.push({ k: "w", text: "Сегодня по плану тренировка. Выбери её ниже и начни.", btn: null });
@@ -1472,13 +1487,20 @@ function viewSettings() {
   if (S.set === "account") return backBar("Аккаунт и облако") + viewAccount();
   if (S.set === "forecast") return backBar("Прогноз результатов") + viewForecast();
   if (S.set === "regular") return backBar("Индекс регулярности") + viewRegular();
+  if (S.set === "ach") return backBar("Коллекция достижений") + viewAch();
+  if (S.set === "friends") return backBar(FR.open ? "Друг" : "Друзья и сообщения") + viewFriends();
+  if (FR.open) frCloseChat();
   let h = memWarn() + '<div class="sec" style="margin-top:6px"><h2>Настройки</h2></div>' +
     '<div class="sgl">Персонализация</div><div class="sgroup">' +
     srow("palette", "Оформление", cur[1], "theme-open") +
-    srow("bell", "Уведомления", n.on && (n.w.on || n.b.on) ? "Включены" : "Напоминания о тренировках и замерах", "set-go\" data-to=\"notif") + "</div>" +
+    srow("bell", "Уведомления", n.on && (n.w.on || n.b.on) ? "Включены" : "Напоминания о тренировках и замерах", "set-go\" data-to=\"notif") +
+    '<div class="srow flat"><span class="si">' + icon("star", 22) + '</span><span class="g"><b>Память предпочтений</b><small>Запоминает привычные блюда и тренировки</small></span>' + sw(memOn(), "mem-toggle", "Память предпочтений") + "</div></div>" +
     '<div class="sgl">Анализ</div><div class="sgroup">' +
     srow("trend", "Прогноз результатов", "Динамика и сценарии на 8 недель", "set-go\" data-to=\"forecast") +
-    srow("check", "Индекс регулярности", "Выполнение своего плана: " + rgWeek().idx + "% за 7 дней", "set-go\" data-to=\"regular") + "</div>" +
+    srow("check", "Индекс регулярности", "Выполнение своего плана: " + rgWeek().idx + "% за 7 дней", "set-go\" data-to=\"regular") +
+    srow("trophy", "Коллекция личных достижений", "Открыто " + achList().filter(a => a.done).length + " из " + ACH.length, "set-go\" data-to=\"ach") + "</div>" +
+    '<div class="sgl">Общение</div><div class="sgroup">' +
+    srow("chat", "Друзья и сообщения", FR.unTotal ? "Новых сообщений: " + FR.unTotal : PROF() ? "Твой код: " + esc(PROF().code) : "Профиль, код, прогресс друзей", "set-go\" data-to=\"friends") + "</div>" +
     '<div class="sgl">Данные и приложение</div><div class="sgroup">' +
     srow("users", "Аккаунт и облако", FBA ? esc(FBA.email) : fbReady() ? "Войти или создать аккаунт" : "Данные на всех устройствах", "set-go\" data-to=\"account") +
     srow("cloud", "Резервное копирование", syncOn() ? (GH ? "GitHub" : "Облако Telegram") + (SM.err ? " · ошибка" : SM.dirty ? " · ждёт отправки" : " · синхронизировано") : "Не включено: облако и файл", "set-go\" data-to=\"backup") +
@@ -1575,8 +1597,15 @@ const actions = {
   "n-b": () => { NT().b.on = !NT().b.on; persist(); render(); },
   "n-day": b => { const d = +b.dataset.d, a = NT().w.days, i = a.indexOf(d); if (i >= 0) a.splice(i, 1); else a.push(d); persist(); render(); },
   "n-every": b => { NT().b.every = +b.dataset.e; persist(); render(); },
-  "rem-x": b => { SETD().dis[b.dataset.k] = today(); persist(); render(); },
-  "rem-go": b => { SETD().dis[b.dataset.k] = today(); persist(); if (b.dataset.k === "rep") { S.tab = "settings"; S.set = "regular"; } else { S.tab = "kbzhu"; S.kv = "bio"; } render(); },
+  "rem-x": b => { const k = b.dataset.k; if (k === "ach") achMarkSeen(); else { SETD().dis[k] = k === "msg" ? FR.unStamp : today(); persist(); } render(); },
+  "rem-go": b => {
+    const k = b.dataset.k;
+    if (k === "ach") { achMarkSeen(); S.tab = "settings"; S.set = "ach"; }
+    else if (k === "msg") { SETD().dis.msg = FR.unStamp; persist(); S.tab = "settings"; S.set = "friends"; }
+    else if (k === "ret") { S.tab = "kbzhu"; S.kv = "log"; S.retDraft = null; S.retSheet = true; }
+    else { SETD().dis[k] = today(); persist(); if (k === "rep") { S.tab = "settings"; S.set = "regular"; } else { S.tab = "kbzhu"; S.kv = "bio"; } }
+    render();
+  },
   day: async b => { S.dayKey = b.dataset.day; S.view = "day"; try { await loadHistory(); } catch (e) {} render(); },
   "wk-prev": () => { S.weekOff++; render(); },
   "wk-next": () => { if (S.weekOff > 0) S.weekOff--; render(); },
@@ -2062,6 +2091,57 @@ async function shPush(p) {
     shAt = 0;
   } catch (e) {}
 }
+
+/* ---- загрузка списка продуктов в общую базу ---- */
+function parseFoodList(text) {
+  const items = [], bad = [], seen = new Set(), num = v => { const t = String(v == null ? "" : v).trim().replace(",", "."); return t === "" ? NaN : Number(t); };
+  String(text || "").split(/\r?\n/).forEach((raw, i) => {
+    const ln = raw.trim(); if (!ln || /^(#|\/\/)/.test(ln)) return;
+    const c = ln.split(/;|\t/).map(x => x.trim());
+    if (c.length < 4) return bad.push([i + 1, "нужно минимум 4 поля: название; ккал; белки; жиры; углеводы"]);
+    let name, k, b, j, u, code;
+    if (c.length >= 5) { name = c[0]; k = num(c[1]); b = num(c[2]); j = num(c[3]); u = num(c[4]); code = (c[5] || "").replace(/\D/g, ""); }
+    else { name = c[0]; b = num(c[1]); j = num(c[2]); u = num(c[3]); k = NaN; code = ""; }
+    if (i === 0 && !(b >= 0) && !(num(c[1]) >= 0)) return;   // строка-заголовок
+    const ok = v => v >= 0 && v <= 100;
+    if (name.length < 2 || name.length > 79) return bad.push([i + 1, "название от 2 до 79 символов"]);
+    if (!ok(b) || !ok(j) || !ok(u)) return bad.push([i + 1, "белки, жиры, углеводы: числа от 0 до 100"]);
+    if (b + j + u > 100.5) return bad.push([i + 1, "сумма Б+Ж+У больше 100 г на 100 г продукта"]);
+    if (!(k >= 0)) k = Math.round(4 * b + 9 * j + 4 * u);
+    if (k > 900) return bad.push([i + 1, "ккал больше 900 на 100 г"]);
+    if (code && (code.length < 8 || code.length > 14)) code = "";
+    const p = { name, k: Math.round(k * 10) / 10, b, j, u, code }, key = shKey(p);
+    if (seen.has(key)) return bad.push([i + 1, "повтор"]);
+    seen.add(key); items.push(p);
+  });
+  return { items, bad };
+}
+async function shPut(p) {
+  const url = `${sharedBase()}/foods/${shKey(p)}.json`;
+  if (await fetchJson(url, 10000)) return "exists";
+  const tok = await fbToken();
+  const r = await fetch(url + "?auth=" + encodeURIComponent(tok), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ n: p.name, k: p.k, b: p.b, j: p.j, u: p.u, c: p.code || "", t: Date.now() }) });
+  return r.ok ? "new" : "err";
+}
+Object.assign(actions, {
+  "sh-rules-copy": () => actions["sh-rules"](),
+  "sh-file": () => { const f = $("#sh-file"); if (f) f.click(); },
+  "sh-import": async () => {
+    if (!FBA) return note("Сначала войди в аккаунт: Настройки → Аккаунт и облако.");
+    const r = parseFoodList(($("#sh-imp") || {}).value || "");
+    if (!r.items.length) return note(r.bad.length ? "Ни одна строка не подошла. Строка " + r.bad[0][0] + ": " + r.bad[0][1] + "." : "Вставь список: по одному продукту в строке.");
+    if (!(await ask("Добавить в общую базу продуктов: " + r.items.length + (r.bad.length ? " (пропущено строк: " + r.bad.length + ")" : "") + "? Уже существующие не изменятся."))) return;
+    const st = { new: 0, exists: 0, err: 0 }; let i = 0;
+    S.shBusy = true; render();
+    await Promise.all(Array.from({ length: 4 }, async () => { while (i < r.items.length) { const p = r.items[i++]; try { st[await shPut(p)]++; } catch (e) { st.err++; } } }));
+    S.shBusy = false; shCache = null; shAt = 0; render();
+    note("Добавлено: " + st.new + ". Уже были: " + st.exists + (st.err ? ". Ошибок: " + st.err + " (проверь правила Firebase)" : "") + (r.bad.length ? ". Пропущено строк: " + r.bad.length + " (первая: " + r.bad[0][0] + ", " + r.bad[0][1] + ")" : "") + ".");
+  }
+});
+document.addEventListener("change", e => {
+  if (e.target.id !== "sh-file" || !e.target.files[0]) return;
+  const rd = new FileReader(); rd.onload = () => { const t = $("#sh-imp"); if (t) t.value = String(rd.result || ""); }; rd.readAsText(e.target.files[0]);
+});
 const SH_RULES = `{
   "rules": {
     "users": {
@@ -2084,6 +2164,64 @@ const SH_RULES = `{
         "t": { ".validate": "newData.isNumber()" },
         "$other": { ".validate": false }
       }
+    },
+    "codes": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.val() === auth.uid) || (data.val() === auth.uid && !newData.exists()))",
+        ".validate": "newData.isString() && newData.val().length < 40"
+      }
+    },
+    "profiles": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['name','code'])",
+        "name": { ".validate": "newData.isString() && newData.val().length > 1 && newData.val().length <= 30" },
+        "code": { ".validate": "newData.isString() && newData.val().length <= 12" },
+        "$other": { ".validate": false }
+      }
+    },
+    "friends": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$fid": {
+          ".read": "auth != null && (auth.uid === $uid || auth.uid === $fid)",
+          ".write": "auth != null && (auth.uid === $uid || (auth.uid === $fid && (!newData.exists() || root.child('requests').child($fid).child($uid).exists())))",
+          ".validate": "newData.val() === true"
+        }
+      }
+    },
+    "requests": {
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$from": {
+          ".write": "auth != null && (auth.uid === $from || (auth.uid === $to && !newData.exists()))",
+          ".validate": "newData.hasChildren(['name','at'])"
+        }
+      }
+    },
+    "progress": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || (root.child('friends').child($uid).child(auth.uid).exists() && root.child('friends').child(auth.uid).child($uid).exists()))",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['name','at'])"
+      }
+    },
+    "chats": {
+      "$pair": {
+        ".read": "auth != null && ($pair.beginsWith(auth.uid) || $pair.endsWith(auth.uid))",
+        "$mid": {
+          ".write": "auth != null && !data.exists() && newData.child('from').val() === auth.uid && $pair === (auth.uid < newData.child('to').val() ? auth.uid + '_' + newData.child('to').val() : newData.child('to').val() + '_' + auth.uid) && root.child('friends').child(auth.uid).child(newData.child('to').val()).exists() && root.child('friends').child(newData.child('to').val()).child(auth.uid).exists()",
+          ".validate": "newData.hasChildren(['from','to','text','at'])",
+          "from": { ".validate": "newData.isString()" },
+          "to": { ".validate": "newData.isString()" },
+          "text": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500" },
+          "at": { ".validate": "newData.isNumber()" },
+          "n": { ".validate": "newData.isString() && newData.val().length <= 40" },
+          "$other": { ".validate": false }
+        }
+      }
     }
   }
 }`;
@@ -2093,6 +2231,10 @@ function viewShared() {
   if (base) {
     h += '<div class="sgroup"><div class="srow flat"><span class="si">' + icon("users", 22) + '</span><span class="g"><b>' + (on ? "Общая база подключена" : "Общая база выключена") + "</b><small>" + esc(base.replace("https://", "")) + (shCache ? " · продуктов: " + shCache.length : "") + (shErr ? " · ошибка: " + esc(shErr) : "") + "</small></span></div></div>" +
       '<button class="btn primary" data-act="sh-test">Проверить подключение</button>' +
+      '<div class="card" style="margin-top:12px"><div class="b">Загрузить список продуктов</div><div class="sub" style="margin:4px 0 8px;line-height:1.5">По одному продукту в строке, значения на 100 г через точку с запятой: Название; ккал; белки; жиры; углеводы; штрихкод (штрихкод можно не писать). Нужен вход в аккаунт. Уже существующие продукты не меняются.</div>' +
+      '<textarea id="sh-imp" rows="6" placeholder="Творог 5%; 121; 17; 5; 1,8; 4601234567890&#10;Гречка варёная; 110; 4,2; 1,1; 21" style="width:100%"></textarea>' +
+      '<input id="sh-file" type="file" accept=".txt,.csv,text/plain" hidden><div class="row"><button class="btn soft" style="margin:0" data-act="sh-file">Выбрать файл</button><button class="btn primary" style="margin:0" data-act="sh-import"' + (S.shBusy ? " disabled" : "") + '>' + (S.shBusy ? "Загрузка…" : "Добавить в базу") + '</button></div></div>' +
+      '<button class="btn soft" data-act="sh-rules">Скопировать правила Firebase</button>' +
       `<button class="btn soft" data-act="sh-toggle">${on ? "Выключить" : "Включить"}</button>` +
       '<div class="sub" style="margin:8px 4px">Когда база включена, продукты, которые ты добавляешь вручную, попадают в неё, а продукты других людей находятся в поиске и по штрихкоду. Чужие записи нельзя изменить или удалить.</div>';
     if (!fromCode) h += '<button class="btn danger" data-act="sh-disconnect">Отключить и забыть адрес</button>';
@@ -2152,7 +2294,7 @@ function viewKbzhu() {
       b("tips", "trend", "Советы", "Вес, недельная сводка и рекомендации") +
       b("bio", "body", "Биометрические данные", "Рост, вес, замеры, цель и её прогресс");
   }
-  return h + (S.kvp ? viewPicker() : "") + (S.gsheet ? viewGoalSheet() : "") + (S.wedit ? viewWEdit() : "") + (S.gdone ? viewGDone() : "") + (S.kvinfo ? viewKvInfo() : "") + (S.normSheet ? viewNorm() : "") + (S.eat ? viewEat() : "");
+  return h + (S.kvp ? viewPicker() : "") + (S.gsheet ? viewGoalSheet() : "") + (S.wedit ? viewWEdit() : "") + (S.gdone ? viewGDone() : "") + (S.kvinfo ? viewKvInfo() : "") + (S.normSheet ? viewNorm() : "") + (S.eat ? viewEat() : "") + (S.retSheet ? viewRet() : "");
 }
 
 /* калькулятор: сырое → готовое */
@@ -2265,15 +2407,18 @@ function viewNorm() {
     '<button class="btn primary" data-act="norm-save">Сохранить</button>' + (N().custom ? '<button class="btn soft" data-act="norm-reset">Сбросить на формулу</button>' : "") + "</div></div>";
 }
 function viewLog() {
+  retCheck();
   const d = S.kvDay || (S.kvDay = today()), L = dayLog(d), tot = sumM(L), pl = nutriPlan(), g = pl ? pl.k : 0, mg = pl;
   const dt = new Date(d + "T00:00:00");
   let h = `<div class="kick" style="margin-left:0">${WD[dt.getDay()]} · ${dt.getDate()} ${MONTHS[dt.getMonth()]}<span class="wk-nav"><button data-act="kv-day" data-d="-1" aria-label="Раньше">${icon("back", 20)}</button><button data-act="kv-day" data-d="1" aria-label="Позже" ${d >= today() ? 'disabled style="opacity:.3"' : ""}>${icon("right", 20)}</button></span></div>`;
   h += `<div class="dayh" style="margin-bottom:12px">${d === today() ? "Сегодня" : d === addDays(today(), -1) ? "Вчера" : fmtDay(d)}</div>`;
+  h += viewStreak();
   h += `<div class="ringcard"><div class="rwrap">${ringSvg(tot.k, g)}<div class="rmid"><b>${fmtK(tot.k)}</b><span>${g > 0 ? `из ${fmtK(g)}` : "ккал"}</span>${g > 0 ? "<span>ккал</span>" : ""}</div></div>` +
     `<div class="rbars">${macroBar("Белки", tot.b, mg && mg.b)}${macroBar("Жиры", tot.j, mg && mg.j)}${macroBar("Углеводы", tot.u, mg && mg.u)}</div></div>`;
   h += `<div class="normrow"><div class="sub">${pl ? (pl.custom ? "Твоя норма БЖУ" : "Норма для цели «" + GOALS[pl.type] + "»" + (pl.bw ? " · вес " + fmtNum(pl.bw) + " кг" : "") + (pl.manual ? " · своя норма ккал" : "")) : "Норма не задана"}</div><button class="chipb" data-act="norm-open">Моя норма</button></div>`;
   if (!(g > 0)) h += '<div class="warn">Запиши свой вес в «Советах» или нажми «Моя норма» и впиши свои граммы БЖУ.</div>';
   else if (tot.k > g * 1.1) h += `<div class="warn">Норма превышена на ${fmtK(tot.k - g)} ккал.</div>`;
+  h += viewFoodChips();
   h += '<div class="sec"><h2>Приёмы пищи</h2></div>';
   const autoM = m => (MEALS.some(x => x[0] === m) ? m : "sn");
   for (const [mk, name, ic] of MEALS) {
@@ -2306,8 +2451,9 @@ function foodPickList() {
   let h = "";
   if (!q) {
     if (ps.length) {
-      const all = !!S.kvp.all, show = all ? ps : ps.slice(0, 5);
-      h += '<div class="sub" style="margin:2px 2px 8px">' + (all ? "Все мои продукты" : "Недавние продукты") + "</div>" + show.map(p => row(p, "l", ps.indexOf(p))).join("");
+      const all = !!S.kvp.all, fs = memOn() ? new Map(foodStats().map(o => [o.name, o.n])) : null, freq = !!(fs && ps.some(p => (fs.get(p.name) || 0) > 1));
+      const rank = freq ? ps.map((p, i) => ({ p, i, n: fs.get(p.name) || 0 })).sort((a, b) => b.n - a.n || a.i - b.i).map(x => x.p) : ps, show = all ? ps : rank.slice(0, 5);
+      h += '<div class="sub" style="margin:2px 2px 8px">' + (all ? "Все мои продукты" : freq ? "Ты часто выбираешь" : "Недавние продукты") + "</div>" + show.map(p => row(p, "l", ps.indexOf(p))).join("");
       if (ps.length > 5) h += `<button class="btn soft" style="margin-top:0" data-act="kv-all">${all ? "Свернуть" : "Показать все (" + ps.length + ")"}</button>`;
     }
   } else {
@@ -2641,13 +2787,13 @@ Object.assign(actions, {
   "kv-quick": b => {
     const x = recentFoods()[+b.dataset.i]; if (!x) return;
     const p = N().prods.find(q => q.name === x.name) || keepProd({ name: x.name, k: r1(x.k / x.g * 100), b: r1(x.b / x.g * 100), j: r1(x.j / x.g * 100), u: r1(x.u / x.g * 100), code: "" });
-    kvOpen("log", autoMeal()); S.kvp.sel = p; render();
+    kvOpen("log", autoMeal()); S.kvp.sel = p; kvMem(S.kvp); render(); kvFill();
   },
   "kv-sel": b => {
     const k = S.kvp, src = b.dataset.src, p = src === "l" ? N().prods.slice().reverse()[+b.dataset.i] : src === "s" ? (k.sh || [])[+b.dataset.i] : k.online[+b.dataset.i];
     if (!p) return;
     if (p.partial) { k.draft = p; k.manual = true; k.msg = "В базе не все значения. Проверь и дополни."; return render(); }
-    k.sel = p.id ? p : keepProd(p, true); render();
+    k.sel = p.id ? p : keepProd(p, true); kvMem(k); render(); kvFill();
   },
   "kv-add": () => {
     const g = num("kv-g"); if (!(g > 0 && g < 10000)) return note("Укажи вес в граммах");
@@ -2896,7 +3042,7 @@ async function cloudWrite(prevN) {
   if (prevN > n) await csCall("removeItems", Array.from({ length: prevN - n }, (_, i) => "gd_" + (n + i)));
   return { rev, clean: e0 === editCount };
 }
-function localSave() { try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) {} }
+function localSave() { DV++; try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) {} }
 function photoMap() {
   const m = {}; for (const w of D.workouts) for (const e of w.exercises) if (e.photo) m[e.name] = e.photo;
   for (const s of D.sessions) for (const e of s.exercises) if (e.photo) m[e.name] = e.photo;
@@ -2933,7 +3079,7 @@ function mergeDocs(L, C) {
     n.bio = Object.assign({}, cb, lb, { entries: un(lb.entries, cb.entries, "id"), done: un(lb.done, cb.done, "id"), goal: lb.goal || cb.goal || null });
   } else if (!ln && cn) M.nutri = cn;
   M.settings = L.settings || C.settings || null;
-  { const a = L.extra || {}, c = C.extra || {}; M.extra = { fat: un(a.fat, c.fat, "day"), sleep: Object.assign({}, c.sleep || {}, a.sleep || {}), habits: un(a.habits, c.habits, "id"), hdone: Object.assign({}, c.hdone || {}, a.hdone || {}) }; }
+  { const a = L.extra || {}, c = C.extra || {}; M.extra = { fat: un(a.fat, c.fat, "day"), sleep: Object.assign({}, c.sleep || {}, a.sleep || {}), prof: (a.prof || c.prof) ? Object.assign({}, c.prof || {}, a.prof || {}, { fr: Math.max((a.prof || {}).fr || 0, (c.prof || {}).fr || 0), ms: Math.max((a.prof || {}).ms || 0, (c.prof || {}).ms || 0) }) : null, ret: (a.ret && c.ret) ? ((a.ret.start || "") >= (c.ret.start || "") ? a.ret : c.ret) : (a.ret || c.ret || null), achSeen: (Array.isArray(a.achSeen) || Array.isArray(c.achSeen)) ? [...new Set([...(a.achSeen || []), ...(c.achSeen || [])])] : undefined }; }
   M.seed1 = !!(L.seed1 || C.seed1);
   return M;
 }
@@ -3030,7 +3176,7 @@ function viewBackup() {
    ==================================================================== */
 const X = () => {
   const x = D.extra || (D.extra = {});
-  x.fat = x.fat || []; x.sleep = x.sleep || {}; x.habits = x.habits || []; x.hdone = x.hdone || {};
+  x.fat = x.fat || []; x.sleep = x.sleep || {}; delete x.habits; delete x.hdone;
   return x;
 };
 const pctTxt = v => (v > 0 ? "+" : v < 0 ? "−" : "") + String(Math.abs(Math.round(v * 10) / 10)).replace(".", ",") + "%";
@@ -3375,22 +3521,19 @@ function rgWeek() {
   const ses = D.sessions.filter(s => s.finishedAt != null && s.day >= a && s.day <= T).length;
   const diary = days.filter(d => N().log.some(x => x.day === d));
   const sl = days.filter(d => X().sleep[d] > 0), slAvg = sl.length ? avg(sl.map(d => X().sleep[d])) : null;
-  const hb = X().habits, hbDone = hb.length ? days.reduce((s, d) => s + (X().hdone[d] || []).filter(id => hb.some(h => h.id === id)).length, 0) : 0;
   const sleepUsed = Object.keys(X().sleep).some(d => d >= addDays(T, -13));
   const comps = [
     { k: "tr", name: "Тренировки", txt: `${Math.min(ses, 99)} из ${plan}`, r: Math.min(1, ses / plan) },
     { k: "di", name: "Дневник питания", txt: `${diary.length} из 7 дней`, r: diary.length / 7 }
   ];
   if (sleepUsed) comps.push({ k: "sl", name: "Сон", txt: `данные заполнены за ${sl.length} из 7 дней` + (slAvg ? `, в среднем ${wkFmt(slAvg)} ч` : ""), r: sl.length / 7 });
-  if (hb.length) comps.push({ k: "hb", name: "Привычки", txt: `выполнено ${Math.round(hbDone / (hb.length * 7) * 100)}% целей`, r: hbDone / (hb.length * 7) });
   const idx = Math.round(avg(comps.map(c => c.r)) * 100);
-  return { a, T, days, plan, ses, diary, comps, idx, sl, slAvg, hb };
+  return { a, T, days, plan, ses, diary, comps, idx, sl, slAvg };
 }
 const RG_TIPS = {
   tr: "Заранее выбери дни и время тренировок и включи напоминание в «Уведомлениях». Если не получается на целую тренировку, договорись с собой хотя бы на короткую.",
   di: "Записывай еду сразу после приёма, а не вечером. Для начала достаточно отмечать завтрак и ужин.",
-  sl: "Заполняй сон утром, пока помнишь: это занимает 10 секунд. Заодно попробуй ложиться на 30 минут раньше.",
-  hb: "Оставь одну-две самые важные привычки вместо длинного списка и привяжи их к тому, что уже делаешь каждый день."
+  sl: "Заполняй сон утром, пока помнишь: это занимает 10 секунд. Заодно попробуй ложиться на 30 минут раньше."
 };
 function rgReport(w) {
   const good = w.comps.filter(c => c.r >= 0.8), bad = w.comps.slice().sort((a, b) => a.r - b.r)[0];
@@ -3417,9 +3560,6 @@ function viewRegular() {
   h += '<div class="sec"><h2>Отчёт за неделю</h2></div><div class="card"><div class="sub" style="margin-bottom:6px">' + fmtDay(w.a) + " – " + fmtDay(w.T) + `</div><div class="b">Что получается</div><div class="sub" style="margin-bottom:8px">${esc(rp.goodTxt)}</div><div class="b">Что мешает</div><div class="sub" style="margin-bottom:8px">${esc(rp.badTxt)}</div><div class="b">Одно изменение на следующую неделю</div><div class="sub">${esc(rp.one)}</div></div>`;
   h += '<div class="sec"><h2>Отметки дня</h2></div><div class="seg" role="group" aria-label="День"><button class="' + (S.regDay === "y" ? "" : "on") + '" data-act="rg-day" data-d="t">Сегодня</button><button class="' + (S.regDay === "y" ? "on" : "") + '" data-act="rg-day" data-d="y">Вчера</button></div>';
   h += '<div class="card"><label class="field-l" for="sl-h">Сколько часов спал(а) ночью</label><div class="row" style="margin-top:0"><input id="sl-h" inputmode="decimal" placeholder="7,5" value="' + (X().sleep[x] ? String(X().sleep[x]).replace(".", ",") : "") + '"><button class="btn soft" style="margin:0;width:auto;flex:none" data-act="rg-sleep">Сохранить</button></div></div>';
-  const hb = X().habits, dn = X().hdone[x] || [];
-  h += '<div class="card"><div class="b">Привычки</div>' + (hb.length ? hb.map(p => `<div class="mitem" style="padding:4px 0"><button class="chk ${dn.includes(p.id) ? "on" : ""}" data-act="rg-hb" data-id="${esc(p.id)}" role="checkbox" aria-checked="${dn.includes(p.id)}" aria-label="${esc(p.name)}">${dn.includes(p.id) ? icon("check", 18) : ""}</button><div class="g" style="padding-left:8px">${esc(p.name)}</div><button class="ico" data-act="rg-hb-del" data-id="${esc(p.id)}" aria-label="Удалить привычку ${esc(p.name)}">${icon("x", 16)}</button></div>`).join("") : '<div class="sub" style="margin-top:4px">Добавь привычки, которые хочешь выполнять каждый день: вода, шаги, растяжка.</div>') +
-    '<div class="row"><input id="hb-new" maxlength="40" placeholder="Новая привычка" autocomplete="off"><button class="btn soft" style="margin:0;width:auto;flex:none" data-act="rg-hb-add">Добавить</button></div></div>';
   h += '<div class="sub" style="margin:8px 4px">Отчёт собирается на экране. Если уведомления включены, в воскресенье вечером и в понедельник утром вверху «Дневника» появится напоминание его открыть. Сообщения в Telegram сам бот отправить не может, пока у приложения нет собственного сервера.</div>';
   return h;
 }
@@ -3468,21 +3608,6 @@ Object.assign(actions, {
     if (v > 0) X().sleep[d] = Math.round(v * 10) / 10; else delete X().sleep[d];
     persist(); render();
   },
-  "rg-hb": b => {
-    const d = S.regDay === "y" ? addDays(today(), -1) : today(), a = X().hdone[d] || (X().hdone[d] = []), i = a.indexOf(b.dataset.id);
-    if (i >= 0) a.splice(i, 1); else a.push(b.dataset.id);
-    persist(); render();
-  },
-  "rg-hb-add": () => {
-    const n = cleanTitle((($("#hb-new") || {}).value || "")); if (!n) return note("Впиши название привычки.");
-    if (X().habits.length >= 12) return note("Не больше 12 привычек.");
-    X().habits.push({ id: uid8(), name: n }); persist(); render();
-  },
-  "rg-hb-del": async b => {
-    const p = X().habits.find(x => x.id === b.dataset.id); if (!p) return;
-    if (!(await ask("Удалить привычку «" + p.name + "»?"))) return;
-    X().habits = X().habits.filter(x => x.id !== p.id); persist(); render();
-  },
   "pex-pick": async b => { S.sum.exercise = b.dataset.name; await calc(); },
   "kv-pmenu": b => { S.kvp.pm = b.dataset.id; render(); },
   "kv-pm-close": () => { S.kvp.pm = null; render(); },
@@ -3515,6 +3640,448 @@ try {
 
 document.addEventListener("visibilitychange", () => { if (bootDone && syncOn()) syncNow(false); });
 window.addEventListener("online", () => { if (bootDone && syncOn()) syncNow(false); });
+
+/* ====================================================================
+   Достижения, серия питания, возвращение, память предпочтений, друзья
+   ==================================================================== */
+ICON.flame = '<path d="M12 3c.6 3.4 5 5.4 5 10a5 5 0 0 1-10 0c0-2.2 1.2-3.6 2.4-4.6.2 1.6.9 2.4 1.8 2.6C10.6 8.4 10.8 5.4 12 3z"/>';
+ICON.star = '<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9l-5.2 2.8 1-5.9-4.3-4.1 5.9-.8z"/>';
+ICON.send = '<path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/>';
+ICON.lock = '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>';
+ICON.copy = '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>';
+ICON.chat = '<path d="M4 5h16v11H9l-5 4z"/>';
+const DAYS_F = ["день", "дня", "дней"];
+function extraRem(out) {
+  const dis = SETD().dis || {}, T = today();
+  const nw = achNew();
+  if (nw.length) out.push({ k: "ach", text: "Новые достижения: " + nw.slice(0, 2).map(a => a.name).join(", ") + (nw.length > 2 ? " и ещё " + (nw.length - 2) : ""), btn: "Открыть" });
+  if (FR.unTotal > 0 && dis.msg !== FR.unStamp) out.push({ k: "msg", text: "Новые сообщения от друзей: " + FR.unTotal, btn: "Открыть" });
+  if (retOffer()) out.push({ k: "ret", text: "Давно не было записей питания. Можно вернуться мягко, без «наверстать».", btn: "Начать" });
+  const r = retActive();
+  if (r && r.train === T && !D.sessions.some(x => x.finishedAt != null && x.day === T) && dis.rt !== T) out.push({ k: "rt", text: "Сегодня день возвращения к тренировкам. Выбери любую, даже короткую.", btn: null });
+}
+function kvMem(k) {
+  if (!memOn() || !k.sel || k.ctx !== "log") return;
+  const o = foodStats().find(x => x.name === k.sel.name); if (o && o.n >= 2) k.meal = o.fav;
+}
+function kvFill() {
+  if (!memOn() || !S.kvp || !S.kvp.sel) return;
+  const o = foodStats().find(x => x.name === S.kvp.sel.name), e = $("#kv-g");
+  if (o && e && !e.value) { e.value = String(o.g).replace(".", ","); e.dispatchEvent(new Event("input", { bubbles: true })); }
+}
+
+
+/* ---------------- общая статистика (кэш по версии данных) ---------------- */
+let _stV = -1, _st = null;
+function runsOf(days) {
+  const s = days.slice().sort(); let best = 0, cur = 0, prev = null;
+  for (const d of s) { cur = prev && daysBetween(prev, d) === 1 ? cur + 1 : 1; if (cur > best) best = cur; prev = d; }
+  const T = today(), last = s[s.length - 1];
+  return { best, cur: last && daysBetween(last, T) <= 1 ? cur : 0, last: last || null };
+}
+const weekMon = d => addDays(d, -((new Date(d + "T00:00:00").getDay() + 6) % 7));
+function stats() {
+  if (_st && _stV === DV) return _st;
+  const T = today(), fin = D.sessions.filter(s => s.finishedAt != null), H = history();
+  const fdays = [...new Set(N().log.map(x => x.day))].sort(), fr = runsOf(fdays);
+  let regWeek = 0;
+  for (let i = 0; i < fdays.length; i++) { const end = addDays(fdays[i], 6); let c = 0; for (let j = i; j < fdays.length && fdays[j] <= end; j++) c++; if (c > regWeek) regWeek = c; }
+  const wkc = {}; fin.forEach(s => { const k = weekMon(s.day); wkc[k] = (wkc[k] || 0) + 1; });
+  let wkBest = 0, wr = 0, pw = null; Object.keys(wkc).sort().forEach(k => { if (wkc[k] >= 2) { wr = pw && daysBetween(pw, k) === 7 ? wr + 1 : 1; if (wr > wkBest) wkBest = wr; pw = k; } else { wr = 0; pw = null; } });
+  const pl = nutriPlan(); let normDays = 0;
+  if (pl && pl.k > 0) { const by = {}; N().log.forEach(x => { (by[x.day] || (by[x.day] = [])).push(x); }); Object.values(by).forEach(a => { const t = sumM(a); if (t.k >= pl.k * 0.9 && t.k <= pl.k * 1.1 && t.b >= pl.b * 0.9) normDays++; }); }
+  const ex = new Set(); let drops = 0, sets = 0, vol = 0;
+  const bestE = {};
+  fin.forEach(s => s.sets.forEach(x => { ex.add(x.exercise); sets++; vol += setVol(x); if ((x.drops || []).length) drops++; if (x.weight > 0 && x.reps > 0) { const e = x.weight * (1 + x.reps / 30); if (!bestE[x.exercise] || e > bestE[x.exercise].e) bestE[x.exercise] = { n: x.exercise, w: x.weight, r: x.reps, e }; } }));
+  const top = Object.values(bestE).sort((a, b) => b.e - a.e).slice(0, 3).map(o => ({ n: String(o.n).slice(0, 60), w: o.w, r: o.r }));
+  const lastS = fin.slice().sort(byStart).pop();
+  const wk = fin.filter(s => s.day >= addDays(T, -6)).length;
+  const bw = D.bodyweight.slice().sort((a, b) => a.day < b.day ? -1 : 1);
+  const bwNow = bw.length ? bw[bw.length - 1] : null, bwOld = bw.filter(p => p.day <= addDays(T, -28)).pop() || bw[0] || null;
+  _st = {
+    ses: fin.length, recs: H.reduce((s, h) => s + (h.records || 0), 0), vol, sets, drops, exN: ex.size,
+    longMin: Math.max(0, ...fin.map(s => (s.finishedAt - s.startedAt) / 60000)),
+    foodN: N().log.length, foodDays: fdays.length, fCur: fr.cur, fBest: fr.best, fLast: fr.last, regWeek, normDays, wkBest, wk, top,
+    last: lastS ? { n: String(lastS.name).slice(0, 40), d: lastS.day } : null,
+    bioN: D.bodyweight.length + (B().entries || []).length, goalsDone: (B().done || []).length,
+    bw: bwNow ? { v: bwNow.weight, d: bwOld && bwOld !== bwNow ? Math.round((bwNow.weight - bwOld.weight) * 10) / 10 : null } : null
+  };
+  _stV = DV; return _st;
+}
+
+/* ---------------- достижения ---------------- */
+const ACH = [
+  ["s1", "trophy", "Первая тренировка", "Заверши первую тренировку", c => [c.ses, 1]],
+  ["s10", "trophy", "10 тренировок завершено", "Заверши 10 тренировок", c => [c.ses, 10]],
+  ["s25", "trophy", "25 тренировок", "Заверши 25 тренировок", c => [c.ses, 25]],
+  ["s50", "trophy", "50 тренировок", "Заверши 50 тренировок", c => [c.ses, 50]],
+  ["s100", "trophy", "Сотня тренировок", "Заверши 100 тренировок", c => [c.ses, 100]],
+  ["pr1", "star", "Первый личный рекорд", "Побей свой результат в любом упражнении", c => [c.recs, 1]],
+  ["pr10", "star", "10 личных рекордов", "Набери 10 рекордов в упражнениях", c => [c.recs, 10]],
+  ["pr30", "star", "30 личных рекордов", "Набери 30 рекордов в упражнениях", c => [c.recs, 30]],
+  ["dw", "flame", "Первая неделя с регулярным дневником", "Запиши питание минимум в 5 из 7 дней подряд", c => [c.regWeek, 5]],
+  ["fs7", "flame", "7 дней подряд", "Записывай питание 7 дней подряд", c => [c.fBest, 7]],
+  ["fs30", "flame", "30 дней подряд", "Записывай питание 30 дней подряд", c => [c.fBest, 30]],
+  ["f1", "food", "Первая запись о еде", "Добавь первую запись в дневник питания", c => [c.foodN, 1]],
+  ["f100", "food", "100 записей о еде", "Сделай 100 записей в дневнике питания", c => [c.foodN, 100]],
+  ["norm", "check", "День в норме", "Попади в норму калорий (±10%) и белка за один день", c => [c.normDays, 1]],
+  ["norm7", "check", "7 дней в норме", "Попади в норму калорий и белка в 7 разных дней", c => [c.normDays, 7]],
+  ["v10", "trend", "10 тонн железа", "Суммарный поднятый вес 10 000 кг", c => [Math.floor(c.vol), 10000]],
+  ["v100", "trend", "100 тонн железа", "Суммарный поднятый вес 100 000 кг", c => [Math.floor(c.vol), 100000]],
+  ["ex10", "coach", "Разнообразие", "Попробуй 10 разных упражнений", c => [c.exN, 10]],
+  ["drop", "coach", "Дроп-сет", "Сделай подход с дроп-сетом", c => [c.drops, 1]],
+  ["long", "clock", "Марафон", "Потренируйся дольше 90 минут за одну тренировку", c => [c.longMin >= 90 ? 1 : 0, 1]],
+  ["wk4", "history", "Месяц ритма", "Тренируйся по 2 раза в неделю 4 недели подряд", c => [c.wkBest, 4]],
+  ["bio", "body", "Первые замеры", "Внеси вес или замеры тела", c => [c.bioN, 1]],
+  ["goal", "trophy", "Цель достигнута", "Выполни цель по весу или замерам", c => [c.goalsDone, 1]],
+  ["ret", "flame", "Вернулся в ритм", "Вернись к дневнику питания после перерыва", c => [c.ret ? 1 : 0, 1]],
+  ["cloud", "cloud", "Данные в облаке", "Войди в аккаунт, чтобы данные были на всех устройствах", c => [FBA ? 1 : 0, 1]],
+  ["prof", "users", "Свой профиль", "Создай профиль в разделе друзей", c => [c.prof ? 1 : 0, 1]],
+  ["fr1", "users", "Первый друг", "Добавь друга по коду", c => [c.fr, 1]],
+  ["msg", "chat", "Первое сообщение", "Отправь сообщение другу", c => [c.ms, 1]]
+];
+function achList() {
+  const s = stats(), p = X().prof || {}, c = Object.assign({}, s, { ret: !!(X().ret && X().ret.done), prof: !!X().prof, fr: p.fr || 0, ms: p.ms || 0 });
+  return ACH.map(([id, ic, name, desc, f]) => { const [v, g] = f(c); return { id, ic, name, desc, v: Math.min(v, g), g, done: v >= g }; });
+}
+function achNew() { const x = X(); if (!Array.isArray(x.achSeen)) x.achSeen = []; return achList().filter(a => a.done && !x.achSeen.includes(a.id)); }
+function achMarkSeen() { X().achSeen = achList().filter(a => a.done).map(a => a.id); persist(); }
+function viewAch() {
+  const L = achList(), n = L.filter(a => a.done).length;
+  let h = `<div class="ringcard"><div class="rwrap">${ringSvg(n, L.length)}<div class="rmid"><b>${n}</b><span>из ${L.length}</span></div></div><div class="rbars"><div class="sub" style="line-height:1.5">Достижения открываются сами по твоим данным: тренировкам, рекордам, дневнику питания и общению.</div></div></div>`;
+  const row = a => `<div class="ach ${a.done ? "on" : "off"}"><span class="ai">${icon(a.done ? a.ic : "lock", 22)}</span><div class="g"><div class="n">${esc(a.name)}</div><div class="sub">${esc(a.desc)}</div>` +
+    (a.done ? "" : (a.g > 1 ? `<div class="pbar"><i style="width:${Math.round(a.v / a.g * 100)}%"></i></div><div class="sub" style="margin-top:3px">${fmtNum(a.v)} из ${fmtNum(a.g)}</div>` : "")) + "</div></div>";
+  const done = L.filter(a => a.done), todo = L.filter(a => !a.done);
+  if (done.length) h += '<div class="sec"><h2>Открыто</h2></div>' + done.map(row).join("");
+  if (todo.length) h += '<div class="sec"><h2>Впереди</h2></div>' + todo.map(row).join("");
+  return h;
+}
+
+/* ---------------- память предпочтений ---------------- */
+const memOn = () => !SETD().memOff;
+function foodStats() {
+  const m = new Map();
+  for (const x of N().log) {
+    if (!(x.g > 0)) continue;
+    let o = m.get(x.name); if (!o) m.set(x.name, o = { name: x.name, n: 0, gs: [], meals: {}, last: "", ref: x });
+    o.n++; o.gs.push(x.g); o.meals[x.meal || "sn"] = (o.meals[x.meal || "sn"] || 0) + 1;
+    if (x.day >= o.last) { o.last = x.day; o.ref = x; }
+  }
+  return [...m.values()].map(o => { const g = o.gs.slice().sort((a, b) => a - b); o.g = g[Math.floor(g.length / 2)]; o.fav = Object.entries(o.meals).sort((a, b) => b[1] - a[1])[0][0]; return o; });
+}
+const foodFor = (meal, k = 3) => foodStats().filter(o => (o.meals[meal] || 0) >= 2 || (o.n >= 3 && o.fav === meal)).sort((a, b) => (b.meals[meal] || 0) - (a.meals[meal] || 0) || b.last.localeCompare(a.last)).slice(0, k);
+const foodTop = k => foodStats().sort((a, b) => b.n - a.n || b.last.localeCompare(a.last)).slice(0, k);
+function foodAdd(name, meal, g) {
+  const o = foodStats().find(x => x.name === name); if (!o) return;
+  const r = o.ref, f = g / r.g;
+  N().log.push({ id: uid8(), day: S.kvDay || today(), meal, name, g, k: r.k * f, b: r.b * f, j: r.j * f, u: r.u * f });
+  persist();
+}
+function wkSuggest() {
+  const ws = (S.workouts || []).filter(w => !w.archived); if (!ws.length) return null;
+  const T = today(), wd = new Date().getDay(), since = addDays(T, -120);
+  const fin = D.sessions.filter(s => s.finishedAt != null && s.day >= since);
+  const byDay = {}; fin.filter(s => new Date(s.day + "T00:00:00").getDay() === wd).forEach(s => { byDay[s.workoutId] = (byDay[s.workoutId] || 0) + 1; });
+  const top = Object.entries(byDay).sort((a, b) => b[1] - a[1])[0];
+  if (top && top[1] >= 2) { const w = ws.find(x => x.id === top[0]); if (w) return { w, why: `Обычно в ${["воскресенье", "понедельник", "вторник", "среду", "четверг", "пятницу", "субботу"][wd]} ты делаешь именно эту тренировку.` }; }
+  if (fin.length >= 2) {
+    const ago = w => w.last_day ? daysBetween(w.last_day, T) : 999, w = ws.slice().sort((a, b) => ago(b) - ago(a))[0];
+    return { w, why: ago(w) >= 999 ? "Ещё не пробовал(а): самое время начать." : `Давно не было: ${ago(w)} ${plural(ago(w), DAYS_F)} назад.` };
+  }
+  return null;
+}
+function wkPrefDays() {
+  const c = [0, 0, 0, 0, 0, 0, 0]; D.sessions.filter(s => s.finishedAt != null && s.day >= addDays(today(), -120)).forEach(s => c[new Date(s.day + "T00:00:00").getDay()]++);
+  const tot = c.reduce((a, b) => a + b, 0); return tot >= 4 ? c.map(v => v / tot >= 0.15) : null;
+}
+function viewForYou() {
+  if (!memOn() || S.session) return "";
+  const T = today(), done = D.sessions.find(s => s.finishedAt != null && s.day === T), sg = wkSuggest();
+  const rr = X().ret;
+  if (done) return `<div class="card" style="display:flex;gap:10px;align-items:center"><span style="color:var(--accent);display:flex">${icon("trophy", 22)}</span><div class="g" style="flex:1"><div class="b">Сегодня тренировка уже есть</div><div class="sub">${esc(done.name)}. Хорошая работа, отдыхай и ешь.</div></div></div>`;
+  if (!sg) return "";
+  const retDay = rr && !rr.done && rr.train === T ? " Сегодня день возвращения к тренировкам." : "";
+  return `<div class="card foryou"><div class="sub" style="text-transform:uppercase;letter-spacing:.06em;font-size:11px;font-weight:700">Для тебя сегодня</div><div class="b" style="font-size:18px;margin-top:2px">${esc(sg.w.name)}</div><div class="sub" style="margin-top:2px">${esc(sg.why + retDay)}</div><div class="row" style="margin-top:8px"><button class="btn primary" style="margin:0;min-height:46px" data-act="start" data-id="${esc(sg.w.id)}">${icon("play", 18)} Начать в один тап</button><button class="btn soft" style="margin:0;width:auto;flex:none;min-height:46px" data-act="open" data-id="${esc(sg.w.id)}">Состав</button></div></div>`;
+}
+function viewFoodChips() {
+  if (!memOn() || (S.kvDay || today()) !== today()) return "";
+  const m = autoMeal(), list = foodFor(m, 3); if (!list.length) return "";
+  const nm = MEALS.find(x => x[0] === m)[1].toLowerCase();
+  return `<div class="card"><div class="sub">Обычно на ${nm} ты ешь. Один тап добавляет привычную порцию.</div><div class="chips" style="margin-top:8px">${list.map((o, i) => `<button class="chipb" data-act="fq-add" data-n="${esc(o.name)}" data-m="${m}" data-g="${o.g}" style="margin:0 6px 6px 0">${esc(o.name)} · ${fmtNum(o.g)} г ${icon("plus", 14)}</button>`).join("")}</div></div>`;
+}
+
+/* ---------------- серия питания и возвращение ---------------- */
+function retGap() { const f = stats().fLast; return f ? daysBetween(f, today()) : 0; }
+const retActive = () => { const r = X().ret; return r && !r.done && r.start && today() <= addDays(r.start, 2) ? r : null; };
+const retOffer = () => !retActive() && retGap() > 5 && (SETD().dis || {}).ret !== today();
+function retDayOk(d, r) { return new Set(N().log.filter(x => x.day === d).map(x => x.meal || "sn")).size >= r.meals; }
+function retCheck() {
+  const r = retActive(); if (!r) return;
+  if (retDayOk(r.start, r) && retDayOk(addDays(r.start, 1), r)) { r.done = today(); persist(); }
+}
+function viewStreak() {
+  const s = stats(), T = today();
+  let h = "";
+  const doneToday = s.fLast === T;
+  h += `<div class="card streak"><span class="fl ${s.fCur ? "on" : ""}">${icon("flame", 26)}</span><div class="g" style="flex:1;min-width:0"><div class="b" style="font-size:18px">${s.fCur ? s.fCur + " " + plural(s.fCur, DAYS_F) + " подряд" : "Серия не начата"}</div>` +
+    `<div class="sub">${s.fCur ? (doneToday ? "Сегодня записано, так держать." : "Запиши сегодня, чтобы серия продолжилась.") : "Запиши любой приём пищи, и серия начнётся."} Лучшая: ${s.fBest} · всего дней: ${s.foodDays}</div></div></div>`;
+  const r = retActive();
+  if (r) {
+    const d0 = r.start, d1 = addDays(r.start, 1), lab = d => d === T ? "Сегодня" : d === addDays(T, -1) ? "Вчера" : d === addDays(T, 1) ? "Завтра" : fmtDay(d);
+    const trainDone = r.train && D.sessions.some(x => x.finishedAt != null && x.day === r.train);
+    const tw = r.train ? WD[new Date(r.train + "T00:00:00").getDay()] + " " + fmtDay(r.train) : "";
+    const ds = [d0, d1].map(d => `<span class="badge" style="${retDayOk(d, r) ? "" : "opacity:.6"}">${icon(retDayOk(d, r) ? "check" : "clock", 13)} ${lab(d)}</span>`).join(" ");
+    h += `<div class="card"><div class="b">Мягкое возвращение</div><div class="sub" style="margin:4px 0 8px">Цель: записать ${r.meals} ${r.meals === 1 ? "приём пищи" : "приёма пищи"} в день, два дня. Без идеала.</div><div>${ds}</div>` +
+      (r.train ? `<div class="sub" style="margin-top:8px">${trainDone ? icon("check", 14) + " Тренировка в " : "Ближайшая тренировка: "}${tw}</div>` : "") +
+      ((r.foods || []).length ? `<div class="sub" style="margin-top:8px">Привычные блюда, добавь в один тап:</div><div style="margin-top:6px">${r.foods.map(n => { const o = foodStats().find(x => x.name === n); return o ? `<button class="chipb" data-act="fq-add" data-n="${esc(n)}" data-m="${autoMeal()}" data-g="${o.g}" style="margin:0 6px 6px 0">${esc(n)} · ${fmtNum(o.g)} г ${icon("plus", 14)}</button>` : ""; }).join("")}</div>` : "") +
+      '<button class="link" style="margin-top:4px" data-act="ret-cancel">Отменить план</button></div>';
+  } else if (X().ret && X().ret.done === T) {
+    h += '<div class="card"><div class="b">Ты вернулся в ритм</div><div class="sub">Два дня записей позади. Теперь просто продолжай, а серия наберётся сама.</div></div>';
+  } else if (retOffer()) {
+    const g = retGap();
+    h += `<div class="card"><div class="b">С возвращением</div><div class="sub" style="margin:4px 0 8px">Записей питания не было ${g} ${plural(g, DAYS_F)}. Это нормально. Без «наверстать»: выбери день тренировки, вспомни привычные блюда и поставь маленькую цель на пару дней.</div><button class="btn primary" style="margin-top:0" data-act="ret-open">Вернуться мягко</button><button class="link" style="margin-top:6px" data-act="ret-later">Не сегодня</button></div>`;
+  }
+  return h;
+}
+function viewRet() {
+  const d = S.retDraft || (S.retDraft = { train: null, foods: [], meals: 1 }), T = today(), pref = wkPrefDays(), nd = SETD().notif.w.days || [];
+  const sg = wkSuggest();
+  const days = Array.from({ length: 6 }, (_, i) => addDays(T, i));
+  const good = x => { const wd = new Date(x + "T00:00:00").getDay(); return pref ? pref[wd] : nd.includes(wd); };
+  if (!d.train) d.train = days.find(x => good(x) && x > T) || days.find(good) || addDays(T, 1);
+  const top = foodTop(8);
+  let h = '<div class="scrim" data-act="ret-close"></div><div class="sheet" role="dialog" aria-label="Мягкое возвращение"><div class="sheet-in"><div class="grab"></div>' +
+    '<div class="sheet-h"><div class="h1">Мягкое возвращение</div><button class="link" data-act="ret-close">Закрыть</button></div>' +
+    '<div class="sub" style="margin-top:4px">Три маленьких шага. Никаких штрафов за перерыв.</div>' +
+    '<div class="sgl" style="margin-top:14px">1. Ближайший день тренировки</div><div>' +
+    days.map(x => `<button class="chipb ${d.train === x ? "on" : ""}" data-act="ret-train" data-d="${x}" style="margin:0 6px 6px 0;${d.train === x ? "background:var(--accent);color:var(--on-accent);border-color:var(--accent)" : ""}">${WD[new Date(x + "T00:00:00").getDay()]} ${fmtDay(x)}${good(x) ? " ★" : ""}</button>`).join("") + "</div>" +
+    (sg ? `<div class="sub">★ дни, в которые ты обычно тренируешься. Предлагаю тренировку: ${esc(sg.w.name)}.</div>` : '<div class="sub">★ дни, выбранные в «Уведомлениях» или привычные тебе.</div>') +
+    '<div class="sgl">2. Вспомни привычные блюда</div>' +
+    (top.length ? '<div class="sub" style="margin-bottom:6px">Отметь то, что хочешь вернуть в рацион. Они появятся в плане в один тап.</div>' + top.map(o => `<button class="opt ${d.foods.includes(o.name) ? "on" : ""}" data-act="ret-food" data-n="${esc(o.name)}"><span style="flex:1;text-align:left">${esc(o.name)} <span class="sub">· ${fmtNum(o.g)} г</span></span>${d.foods.includes(o.name) ? icon("check") : ""}</button>`).join("") : '<div class="sub">Пока нет сохранённых блюд, и это тоже нормально: добавишь любое в дневнике.</div>') +
+    '<div class="sgl">3. Цель на ближайшие 2 дня</div><div class="seg" role="group" aria-label="Цель">' +
+    [1, 2, 3].map(n => `<button class="${d.meals === n ? "on" : ""}" data-act="ret-meals" data-n="${n}">${n} ${n === 1 ? "приём" : "приёма"}</button>`).join("") + "</div>" +
+    '<div class="sub" style="margin-top:6px">Сколько приёмов пищи в день просто записать. Лучше мало, но каждый день.</div>' +
+    '<button class="btn primary" data-act="ret-go">Начать мягко</button></div></div>';
+  return h;
+}
+
+/* ---------------- профиль, друзья, сообщения (Firebase) ---------------- */
+const FR = { list: null, req: [], err: "", found: null, loading: false, open: null, msgs: [], un: {}, unTotal: 0, unStamp: "", chatT: null };
+const PROF = () => X().prof || null;
+const FR_READ = "gym-frread-v1";
+const frRead = () => { try { return JSON.parse(localStorage.getItem(FR_READ) || "{}") || {}; } catch (e) { return {}; } };
+const frSetRead = (id, t) => { try { const o = frRead(); o[id] = t; localStorage.setItem(FR_READ, JSON.stringify(o)); } catch (e) {} };
+const frKey = uid => (uid < FBA.uid ? uid + "_" + FBA.uid : FBA.uid + "_" + uid);
+const CODE_AL = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+function genCode() { const a = new Uint8Array(8); (window.crypto || {}).getRandomValues ? crypto.getRandomValues(a) : a.forEach((_, i) => a[i] = Math.floor(Math.random() * 256)); let s = ""; a.forEach(v => s += CODE_AL[v % CODE_AL.length]); return s.slice(0, 4) + "-" + s.slice(4); }
+const normCode = t => { const s = String(t || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); return s.length === 8 ? s.slice(0, 4) + "-" + s.slice(4) : ""; };
+async function fbq(method, path, body, qs) {
+  const base = sharedBase(); if (!base) throw new Error("Не задан адрес базы Firebase");
+  const tok = await fbToken();
+  return fbHttp(`${base}/${path}.json?auth=${encodeURIComponent(tok)}${qs ? "&" + qs : ""}`, { method, headers: { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+}
+const frErr = e => (e && (e.status === 401 || e.status === 403)) ? "Нет доступа. Нужно опубликовать обновлённые правила Firebase: нажми «Скопировать правила» ниже и вставь их во вкладку Rules." : (e && e.message) || "Ошибка";
+const frRef = () => { if (S.tab === "settings" && S.set === "friends" && !FR.open) render(); };
+
+async function frCreate(name) {
+  const nm = cleanTitle(name).slice(0, 30); if (nm.length < 2) throw new Error("Введи имя: минимум 2 буквы.");
+  if (PROF() && PROF().code) { await fbq("PUT", "profiles/" + FBA.uid, { name: nm, code: PROF().code }); PROF().name = nm; persist(); return; }
+  for (let i = 0; i < 6; i++) {
+    const code = genCode();
+    if (await fbq("GET", "codes/" + code)) continue;
+    await fbq("PUT", "codes/" + code, FBA.uid);
+    await fbq("PUT", "profiles/" + FBA.uid, { name: nm, code });
+    X().prof = { name: nm, code, w: false, fr: 0, ms: 0 }; persist(); prgSchedule(); return;
+  }
+  throw new Error("Не удалось подобрать код. Повтори.");
+}
+async function frLoad() {
+  if (!FBA || !PROF()) return;
+  FR.loading = true; FR.err = ""; frRef();
+  try {
+    const me = FBA.uid, [mine, reqs] = await Promise.all([fbq("GET", "friends/" + me), fbq("GET", "requests/" + me)]);
+    const rows = await Promise.all(Object.keys(mine || {}).map(async id => {
+      const [pr, back] = await Promise.all([fbq("GET", "profiles/" + id).catch(() => null), fbq("GET", "friends/" + id + "/" + me).catch(() => null)]);
+      const prog = back ? await fbq("GET", "progress/" + id).catch(() => null) : null;
+      return { id, name: (pr && pr.name) || "Без имени", ok: !!back, prog };
+    }));
+    FR.list = rows;
+    FR.req = Object.keys(reqs || {}).map(id => ({ id, name: (reqs[id] && reqs[id].name) || "Без имени" }));
+    const nf = rows.filter(r => r.ok).length; if (nf > (PROF().fr || 0)) { PROF().fr = nf; persist(); }
+  } catch (e) { FR.err = frErr(e); }
+  FR.loading = false; frRef();
+}
+function prgBuild() {
+  const p = PROF(), s = stats(), L = achList();
+  const o = { name: p.name, at: Date.now(), tot: s.ses, wk: s.wk, pr: s.recs, fs: s.fCur, fb: s.fBest, fd: s.foodDays, ac: L.filter(a => a.done).map(a => a.id) };
+  if (s.top.length) o.top = s.top.map(t => ({ n: t.n, w: t.w, r: t.r || 0 }));
+  if (s.last) o.last = s.last;
+  if (p.w && s.bw) o.bw = s.bw.d == null ? { v: s.bw.v } : { v: s.bw.v, d: s.bw.d };
+  return o;
+}
+let prgT = null, prgHash = "";
+function prgSchedule() { if (!FBA || !PROF() || !fbReady()) return; clearTimeout(prgT); prgT = setTimeout(() => prgPush(false), 15000); }
+async function prgPush(force) {
+  if (!FBA || !PROF() || !fbReady()) return;
+  try { const o = prgBuild(), h = JSON.stringify(Object.assign({}, o, { at: 0 })); if (!force && h === prgHash) return; await fbq("PUT", "progress/" + FBA.uid, o); prgHash = h; } catch (e) {}
+}
+async function frPollUnread() {
+  if (!FBA || !PROF() || !fbReady() || document.hidden) return;
+  try {
+    const me = FBA.uid, mine = await fbq("GET", "friends/" + me, undefined, "shallow=true"), rd = frRead(), un = {}; let tot = 0, stamp = "";
+    await Promise.all(Object.keys(mine || {}).map(async id => {
+      const j = await fbq("GET", "chats/" + frKey(id), undefined, 'orderBy="$key"&limitToLast=20').catch(() => null);
+      const arr = Object.values(j || {}).filter(m => m.from === id && m.at > (rd[id] || 0));
+      if (arr.length) { un[id] = arr.length; tot += arr.length; stamp += id + arr[arr.length - 1].at; }
+    }));
+    const req = await fbq("GET", "requests/" + me, undefined, "shallow=true").catch(() => null), rn = Object.keys(req || {}).length;
+    const changed = tot !== FR.unTotal || stamp !== FR.unStamp || rn !== (FR.reqN || 0);
+    FR.un = un; FR.unTotal = tot; FR.unStamp = stamp; FR.reqN = rn;
+    if (changed && !(document.activeElement && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) && (S.tab === "diary" && S.view === "list" || S.tab === "settings")) render();
+  } catch (e) {}
+}
+const fmtAt = ms => { const d = new Date(ms); return pad2(d.getDate()) + "." + pad2(d.getMonth() + 1) + " " + pad2(d.getHours()) + ":" + pad2(d.getMinutes()); };
+function chatHtml() {
+  if (!FR.msgs.length) return '<div class="sub" style="text-align:center;padding:14px 0">Сообщений пока нет. Напиши первым.</div>';
+  return FR.msgs.map(m => `<div class="msg ${m.from === FBA.uid ? "me" : ""}"><div class="bub">${esc(m.text)}</div><small>${fmtAt(m.at)}</small></div>`).join("");
+}
+async function frChatLoad(id, scroll) {
+  try {
+    const j = await fbq("GET", "chats/" + frKey(id), undefined, 'orderBy="$key"&limitToLast=60');
+    FR.msgs = Object.keys(j || {}).map(k => Object.assign({ id: k }, j[k])).sort((a, b) => a.at - b.at);
+    const last = FR.msgs.filter(m => m.from === id).pop(); if (last) frSetRead(id, last.at);
+    if (FR.un[id]) { FR.unTotal -= FR.un[id]; delete FR.un[id]; }
+  } catch (e) { FR.msgs = []; FR.cerr = frErr(e); }
+  const el = $("#chat-list"); if (el && FR.open === id) { const nb = el.scrollHeight - el.scrollTop - el.clientHeight < 60; el.innerHTML = chatHtml(); if (nb || scroll) el.scrollTop = el.scrollHeight; }
+}
+function frCloseChat() { clearInterval(FR.chatT); FR.chatT = null; FR.open = null; }
+function frOpen(id) {
+  FR.open = id; FR.msgs = []; FR.cerr = ""; render();
+  clearInterval(FR.chatT); frChatLoad(id, true); FR.chatT = setInterval(() => { if (FR.open === id && S.tab === "settings" && !document.hidden) frChatLoad(id); }, 6000);
+}
+function viewFriends() {
+  let h = "";
+  if (!FBA) {
+    return '<div class="card"><div class="b">Нужен аккаунт</div><div class="sub" style="margin-top:6px;line-height:1.5">Друзья и сообщения работают через облако. Войди в аккаунт или создай его, и здесь появится твой профиль с кодом.</div><button class="btn primary" data-act="set-go" data-to="account">Войти или создать аккаунт</button></div>';
+  }
+  if (FR.open) return viewFriend();
+  const p = PROF();
+  if (!p) {
+    return '<div class="card"><div class="b">Создай профиль</div><div class="sub" style="margin-top:6px;line-height:1.5">Получишь личный код. Друг вводит его у себя, ты подтверждаешь, и вы видите прогресс друг друга и можете переписываться. Вес не показывается, пока ты сам не разрешишь.</div>' +
+      '<label class="field-l" for="fr-name" style="margin-top:10px">Как тебя будут видеть друзья</label><input id="fr-name" maxlength="30" autocomplete="off" placeholder="Имя или ник" value="' + esc((FBA.email || "").split("@")[0]) + '"><button class="btn primary" data-act="fr-create">Создать профиль</button></div>' + (FR.err ? '<div class="warn">' + esc(FR.err) + '</div><button class="btn soft" data-act="sh-rules">Скопировать правила</button>' : "");
+  }
+  if (FR.list === null && !FR.loading) frLoad();
+  h += `<div class="card"><div class="sub">Твой код для друзей</div><div class="row" style="margin-top:4px;align-items:center"><div class="b" style="font-size:26px;letter-spacing:.08em;flex:1;font-variant-numeric:tabular-nums">${esc(p.code)}</div><button class="chipb" data-act="fr-copy">${icon("copy", 15)} Скопировать</button></div>` +
+    `<div class="sub" style="margin-top:6px">Отправь код другу любым способом. Он введёт его в этом же разделе.</div></div>`;
+  h += '<div class="card"><div class="b">Добавить друга</div><div class="row"><input id="fr-code" autocomplete="off" autocapitalize="characters" placeholder="Код друга, например K7MQ-4XD2" style="text-transform:uppercase"><button class="btn primary" style="margin:0;width:auto;flex:none" data-act="fr-find">Найти</button></div>' +
+    (FR.found ? `<div class="mitem" style="margin-top:8px"><div class="g"><div class="n">${esc(FR.found.name)}</div><div class="sub">Отправить запрос в друзья?</div></div><button class="btn primary" style="margin:0;width:auto;flex:none;min-height:40px" data-act="fr-req">Отправить</button></div>` : "") + "</div>";
+  if (FR.err) h += '<div class="warn">' + esc(FR.err) + '</div><button class="btn soft" data-act="sh-rules">Скопировать правила</button>';
+  if (FR.req.length) h += '<div class="sec"><h2>Запросы в друзья</h2></div><div class="card">' + FR.req.map((r, i) => `<div class="mitem" style="${i ? "" : "border-top:0"}"><div class="g"><div class="n">${esc(r.name)}</div></div><button class="chipb" data-act="fr-ok" data-id="${esc(r.id)}">Принять</button><button class="ico" data-act="fr-no" data-id="${esc(r.id)}" aria-label="Отклонить">${icon("x", 16)}</button></div>`).join("") + "</div>";
+  h += '<div class="sec"><h2>Друзья</h2></div>';
+  if (FR.list === null) h += '<div class="card empty">Загрузка…</div>';
+  else if (!FR.list.length) h += '<div class="card empty">Пока никого. Введи код друга выше.</div>';
+  else h += '<div class="sgroup">' + FR.list.map(f => `<button class="srow" data-act="fr-open" data-id="${esc(f.id)}"><span class="g"><b>${esc(f.name)}</b><small>${f.ok ? (f.prog ? `${f.prog.tot || 0} тренировок · серия питания ${f.prog.fs || 0}` : "прогресс пока не опубликован") : "ждёт подтверждения"}</small></span>${FR.un[f.id] ? `<span class="badge">${FR.un[f.id]}</span>` : ""}${icon("right", 18)}</button>`).join("") + "</div>";
+  h += '<div class="sec"><h2>Мой профиль</h2></div><div class="card"><label class="field-l" for="fr-name">Имя</label><div class="row" style="margin-top:0"><input id="fr-name" maxlength="30" value="' + esc(p.name) + '" autocomplete="off"><button class="btn soft" style="margin:0;width:auto;flex:none" data-act="fr-create">Сохранить</button></div>' +
+    `<div class="srow flat" style="padding:10px 0;min-height:0"><span class="g"><b>Показывать друзьям вес</b><small>Текущий вес и изменение за месяц. Выключено по умолчанию.</small></span>${sw(!!p.w, "fr-w", "Показывать вес")}</div>` +
+    '<div class="sub">Друзьям видны: число тренировок, рекорды, лучшие подъёмы, серия питания, достижения. Еда и замеры не показываются.</div></div>';
+  return h;
+}
+function viewFriend() {
+  const f = (FR.list || []).find(x => x.id === FR.open);
+  if (!f) { FR.open = null; return viewFriends(); }
+  const p = f.prog, L = ACH.length;
+  let h = `<div class="dayh" style="margin-bottom:6px">${esc(f.name)}</div>`;
+  if (!f.ok) return h + '<div class="card"><div class="sub">Друг ещё не подтвердил запрос. Как только он примет его, здесь появятся прогресс и чат.</div></div><button class="btn danger" data-act="fr-del" data-id="' + esc(f.id) + '">Отменить запрос</button>';
+  if (!p) h += '<div class="card"><div class="sub">Прогресс пока не опубликован: он появится, когда друг откроет приложение.</div></div>';
+  else {
+    const t = (l, v) => `<div class="tile"><small class="l">${l}</small><div class="v">${v}</div></div>`;
+    h += `<div class="tiles">${t("Тренировок", p.tot || 0)}${t("За 7 дней", p.wk || 0)}${t("Рекордов", p.pr || 0)}</div><div class="tiles">${t("Серия питания", p.fs || 0)}${t("Лучшая", p.fb || 0)}${t("Достижений", (p.ac || []).length + "/" + L)}</div>`;
+    h += '<div class="card">' + (p.last ? `<div class="mitem" style="border-top:0"><div class="g"><div class="sub">Последняя тренировка</div><div class="n">${esc(p.last.n)} · ${fmtDay(p.last.d)}</div></div></div>` : "") +
+      ((p.top || []).length ? `<div class="sub" style="margin-top:8px">Лучшие подъёмы</div>` + p.top.map(x => `<div class="mitem" style="border-top:0;padding:4px 0"><div class="g">${esc(x.n)}</div><b>${fmtNum(x.w)} кг × ${x.r}</b></div>`).join("") : "") +
+      (p.bw ? `<div class="mitem"><div class="g"><div class="sub">Вес</div><div class="n">${fmtNum(p.bw.v)} кг${p.bw.d != null ? " · " + fmtDelta(p.bw.d) + " за месяц" : ""}</div></div></div>` : "") +
+      ((p.ac || []).length ? `<div class="sub" style="margin-top:8px">Открытые достижения</div><div style="margin-top:4px">${p.ac.map(id => { const a = ACH.find(x => x[0] === id); return a ? `<span class="badge" style="margin:0 4px 4px 0">${icon(a[1], 13)}${esc(a[2])}</span>` : ""; }).join("")}</div>` : "") +
+      `<div class="sub" style="margin-top:8px">Обновлено ${fmtAt(p.at)}</div></div>`;
+  }
+  h += '<div class="sec"><h2>Сообщения</h2></div><div class="card" style="padding:8px"><div id="chat-list" class="chat">' + chatHtml() + '</div><div class="row" style="margin-top:6px"><input id="chat-in" maxlength="500" autocomplete="off" placeholder="Сообщение"><button class="btn primary" style="margin:0;width:auto;flex:none;padding:0 16px" data-act="fr-send" aria-label="Отправить">' + icon("send", 20) + '</button></div>' +
+    (FR.cerr ? `<div class="sub" style="margin-top:6px;color:var(--danger)">${esc(FR.cerr)}</div>` : "") + "</div>" +
+    '<div class="sub" style="margin:4px">Новые сообщения подгружаются, пока открыт чат, и при запуске приложения. Уведомлений вне приложения нет.</div>' +
+    '<button class="btn danger" data-act="fr-del" data-id="' + esc(f.id) + '">Удалить из друзей</button>';
+  return h;
+}
+
+Object.assign(actions, {
+  "ach-seen": () => { achMarkSeen(); render(); },
+  "mem-toggle": () => { SETD().memOff = !SETD().memOff; persist(); render(); },
+  "fq-add": b => { foodAdd(b.dataset.n, b.dataset.m, +b.dataset.g); retCheck(); render(); },
+  "ret-open": () => { S.retDraft = null; S.retSheet = true; render(); },
+  "ret-close": () => { S.retSheet = false; render(); },
+  "ret-later": () => { SETD().dis.ret = today(); persist(); render(); },
+  "ret-train": b => { (S.retDraft || (S.retDraft = { foods: [], meals: 1 })).train = b.dataset.d; render(); },
+  "ret-food": b => { const d = S.retDraft, n = b.dataset.n, i = d.foods.indexOf(n); if (i >= 0) d.foods.splice(i, 1); else d.foods.push(n); render(); },
+  "ret-meals": b => { S.retDraft.meals = +b.dataset.n; render(); },
+  "ret-go": () => { const d = S.retDraft || {}; X().ret = { start: today(), train: d.train || null, foods: (d.foods || []).slice(0, 8), meals: d.meals || 1, done: null }; S.retSheet = false; S.retDraft = null; persist(); render(); },
+  "ret-cancel": async () => { if (await ask("Отменить план возвращения?")) { X().ret = null; persist(); render(); } },
+  "fr-create": async () => {
+    try { await frCreate(($("#fr-name") || {}).value || ""); FR.err = ""; FR.list = null; note("Профиль сохранён."); }
+    catch (e) { FR.err = frErr(e); note(e.message); }
+    render();
+  },
+  "fr-copy": async () => { const t = PROF().code; try { await navigator.clipboard.writeText(t); note("Код скопирован: " + t); } catch (e) { note("Твой код: " + t); } },
+  "fr-find": async () => {
+    const code = normCode(($("#fr-code") || {}).value); FR.found = null;
+    if (!code) return note("Код состоит из 8 символов, например K7MQ-4XD2.");
+    try {
+      const uid = await fbq("GET", "codes/" + code);
+      if (!uid) return note("Такой код не найден. Проверь символы.");
+      if (uid === FBA.uid) return note("Это твой собственный код.");
+      if ((FR.list || []).some(f => f.id === uid)) return note("Этот человек уже в твоём списке.");
+      const pr = await fbq("GET", "profiles/" + uid);
+      FR.found = { uid, name: (pr && pr.name) || "Без имени" }; render();
+    } catch (e) { FR.err = frErr(e); note(FR.err); }
+  },
+  "fr-req": async () => {
+    const f = FR.found; if (!f) return;
+    try {
+      await fbq("PUT", "requests/" + f.uid + "/" + FBA.uid, { name: PROF().name, at: Date.now() });
+      await fbq("PUT", "friends/" + FBA.uid + "/" + f.uid, true);
+      FR.found = null; FR.list = null; note("Запрос отправлен. Когда " + f.name + " примет его, появятся прогресс и чат.");
+    } catch (e) { note(frErr(e)); }
+    render();
+  },
+  "fr-ok": async b => {
+    const id = b.dataset.id, me = FBA.uid;
+    try {
+      await fbq("PUT", "friends/" + me + "/" + id, true);
+      await fbq("PUT", "friends/" + id + "/" + me, true);
+      await fbq("DELETE", "requests/" + me + "/" + id);
+      FR.list = null; prgPush(true);
+    } catch (e) { note(frErr(e)); }
+    render();
+  },
+  "fr-no": async b => { try { await fbq("DELETE", "requests/" + FBA.uid + "/" + b.dataset.id); FR.req = FR.req.filter(r => r.id !== b.dataset.id); } catch (e) { note(frErr(e)); } render(); },
+  "fr-open": b => frOpen(b.dataset.id),
+  "fr-del": async b => {
+    if (!(await ask("Удалить из друзей? Вы перестанете видеть прогресс друг друга."))) return;
+    const id = b.dataset.id, me = FBA.uid;
+    try { await fbq("DELETE", "friends/" + me + "/" + id); await fbq("DELETE", "friends/" + id + "/" + me).catch(() => {}); } catch (e) { return note(frErr(e)); }
+    frCloseChat(); FR.list = null; render();
+  },
+  "fr-w": () => { PROF().w = !PROF().w; persist(); prgPush(true); render(); },
+  "fr-send": async () => {
+    const el = $("#chat-in"), t = (el && el.value || "").trim(); if (!t || !FR.open) return;
+    const id = FR.open, mid = uid8();
+    try {
+      await fbq("PUT", "chats/" + frKey(id) + "/" + mid, { from: FBA.uid, to: id, text: t.slice(0, 500), at: Date.now(), n: PROF().name });
+      el.value = ""; FR.cerr = "";
+      if (!(PROF().ms > 0)) { PROF().ms = 1; persist(); }
+      await frChatLoad(id, true);
+    } catch (e) { FR.cerr = frErr(e); const c = $("#chat-in"); if (c) note(FR.cerr); }
+  }
+});
+document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "chat-in") { e.preventDefault(); actions["fr-send"](); } });
+setTimeout(() => { prgPush(false); frPollUnread(); }, 4000);
+setInterval(frPollUnread, 90000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { setTimeout(frPollUnread, 800); prgSchedule(); } });
 
 /* ---------- старт ---------- */
 (async () => {
