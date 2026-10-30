@@ -479,7 +479,7 @@ async function initStore() {
     smLoad(!!raw);
     if (raw) { const d = JSON.parse(raw); D.workouts = d.workouts || []; D.bodyweight = d.bodyweight || []; D.sessions = d.sessions || []; D.nutri = d.nutri || null; D.settings = d.settings || null; D.extra = d.extra || null; D.seed1 = !!d.seed1; }
     localStorage.setItem(KEY + "-t", "1"); localStorage.removeItem(KEY + "-t");
-    P.mode = "local";
+    P.mode = "local"; DV++;
     try { await Promise.race([syncNow(false), new Promise(r => setTimeout(r, 5000))]); } catch (e) {}
     bootDone = true;
     try { fixNutri(); } catch (e) {}
@@ -1447,7 +1447,7 @@ document.querySelectorAll(".tabs button").forEach(b => { b.onclick = () => showT
 
 /* ---------- действия ---------- */
 const nextName = () => { const L = "АБВГДЕЖЗИК"; const n = (S.workouts || []).length; return "Тренировка " + (L[n] || n + 1); };
-const APP_VERSION = "1.5.0";
+const APP_VERSION = "1.5.2";
 ICON.palette = '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/>';
 ICON.bell = '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"/>';
 ICON.download = '<path d="M6 3h8l4 4v14H6zM14 3v4h4M12 10v6M9.5 13.5L12 16l2.5-2.5"/>';
@@ -1525,7 +1525,7 @@ function viewNotif() {
   h += '<div class="sgl">Замеры</div><div class="sgroup"><div class="srow flat"><span class="g"><b>Напоминать о замерах</b><small>Если давно не вносил биометрические данные</small></span>' + sw(n.b.on, "n-b", "Напоминать о замерах") + "</div>";
   if (n.b.on) h += '<div class="npad"><div class="periods" style="margin-top:0" role="group" aria-label="Как часто">' + [[7, "Раз в неделю"], [14, "Раз в 2 нед"], [30, "Раз в месяц"]].map(([d, l]) => `<button data-act="n-every" data-e="${d}" class="${n.b.every === d ? "on" : ""}">${l}</button>`).join("") + `</div><label class="field-l" for="n-bt" style="margin-top:10px">Время</label><input id="n-bt" type="time" value="${esc(n.b.time)}"></div>`;
   h += "</div>";
-  h += '<div class="sub" style="margin:12px 4px">Напоминания показываются в приложении, когда ты его открываешь в выбранное время или позже. Уведомления в Telegram, когда приложение закрыто, требуют бота на сервере.</div>';
+  h += '';
   return h;
 }
 function exportText() { return JSON.stringify({ app: "gym-diary", version: APP_VERSION, exportedAt: new Date().toISOString(), data: D }, null, 1); }
@@ -1542,7 +1542,7 @@ function viewAbout() {
   return '<div class="card" style="text-align:center;padding:22px"><div style="color:var(--accent);display:flex;justify-content:center">' + icon("trophy", 40) + '</div><div class="h1" style="margin-top:8px">Дневник тренировок</div><div class="sub">Версия ' + APP_VERSION + "</div></div>" +
     '<div class="sgroup"><div class="srow flat"><span class="g"><b>Где хранятся данные</b><small>На этом устройстве и, если ты вошёл в аккаунт, в облаке (см. «Аккаунт и облако»). Также доступны облако Telegram и GitHub в «Резервном копировании». Фото упражнений хранятся только на устройстве.</small></span></div>' +
     `<div class="srow flat"><span class="g"><b>Занято</b><small>около ${sz} КБ</small></span></div></div>` +
-    '<div class="sub" style="margin:12px 4px">Тренировки, история, прогресс, питание (КБЖУ) и биометрия в одном приложении.</div>';
+    '';
 }
 const actions = {
   "set-go": b => { S.set = b.dataset.to; render(); },
@@ -2236,14 +2236,14 @@ function viewShared() {
       '<input id="sh-file" type="file" accept=".txt,.csv,text/plain" hidden><div class="row"><button class="btn soft" style="margin:0" data-act="sh-file">Выбрать файл</button><button class="btn primary" style="margin:0" data-act="sh-import"' + (S.shBusy ? " disabled" : "") + '>' + (S.shBusy ? "Загрузка…" : "Добавить в базу") + '</button></div></div>' +
       '<button class="btn soft" data-act="sh-rules">Скопировать правила Firebase</button>' +
       `<button class="btn soft" data-act="sh-toggle">${on ? "Выключить" : "Включить"}</button>` +
-      '<div class="sub" style="margin:8px 4px">Когда база включена, продукты, которые ты добавляешь вручную, попадают в неё, а продукты других людей находятся в поиске и по штрихкоду. Чужие записи нельзя изменить или удалить.</div>';
+      '';
     if (!fromCode) h += '<button class="btn danger" data-act="sh-disconnect">Отключить и забыть адрес</button>';
   } else {
     h += '<div class="card"><div class="b">Подключить общую базу</div><div class="sub" style="margin-top:6px;line-height:1.55">Общая база хранится в бесплатной Firebase Realtime Database. Один раз её нужно создать, дальше работает само.</div>' +
       '<ol class="sub" style="margin:8px 0 0;padding-left:20px;line-height:1.55"><li>Открой console.firebase.google.com, войди через Google и создай проект (аналитику можно выключить).</li><li>В проекте: Build → Realtime Database → Create database, режим «locked».</li><li>Вкладка Rules: вставь правила из кнопки ниже и нажми Publish.</li><li>Скопируй адрес базы (вверху вкладки Data, вида https://…firebaseio.com) и вставь сюда.</li></ol>' +
       '<button class="btn soft" data-act="sh-rules">Скопировать правила</button>' +
       '<input id="sh-url" placeholder="https://…firebaseio.com" autocomplete="off" style="margin-top:6px"><button class="btn primary" data-act="sh-on">Подключить</button></div>' +
-      '<div class="sub" style="margin:8px 4px">Чтобы база сразу работала у всех, кто открывает приложение, адрес можно один раз вписать в код приложения. Для этого пришли его мне.</div>';
+      '';
   }
   return h;
 }
@@ -3079,7 +3079,7 @@ function mergeDocs(L, C) {
     n.bio = Object.assign({}, cb, lb, { entries: un(lb.entries, cb.entries, "id"), done: un(lb.done, cb.done, "id"), goal: lb.goal || cb.goal || null });
   } else if (!ln && cn) M.nutri = cn;
   M.settings = L.settings || C.settings || null;
-  { const a = L.extra || {}, c = C.extra || {}; M.extra = { fat: un(a.fat, c.fat, "day"), sleep: Object.assign({}, c.sleep || {}, a.sleep || {}), prof: (a.prof || c.prof) ? Object.assign({}, c.prof || {}, a.prof || {}, { fr: Math.max((a.prof || {}).fr || 0, (c.prof || {}).fr || 0), ms: Math.max((a.prof || {}).ms || 0, (c.prof || {}).ms || 0) }) : null, ret: (a.ret && c.ret) ? ((a.ret.start || "") >= (c.ret.start || "") ? a.ret : c.ret) : (a.ret || c.ret || null), achSeen: (Array.isArray(a.achSeen) || Array.isArray(c.achSeen)) ? [...new Set([...(a.achSeen || []), ...(c.achSeen || [])])] : undefined }; }
+  { const a = L.extra || {}, c = C.extra || {}; M.extra = { fat: un(a.fat, c.fat, "day"), sleep: Object.assign({}, c.sleep || {}, a.sleep || {}), prof: (a.prof || c.prof) ? Object.assign({}, c.prof || {}, a.prof || {}, { fr: Math.max((a.prof || {}).fr || 0, (c.prof || {}).fr || 0), ms: Math.max((a.prof || {}).ms || 0, (c.prof || {}).ms || 0) }) : null, ret: (a.ret && c.ret) ? ((a.ret.start || "") >= (c.ret.start || "") ? a.ret : c.ret) : (a.ret || c.ret || null), achDone: Object.assign({}, c.achDone || {}, a.achDone || {}), achSeen: (Array.isArray(a.achSeen) || Array.isArray(c.achSeen)) ? [...new Set([...(a.achSeen || []), ...(c.achSeen || [])])] : undefined }; }
   M.seed1 = !!(L.seed1 || C.seed1);
   return M;
 }
@@ -3144,7 +3144,7 @@ function viewBackup() {
     h += '<div class="sgroup"><div class="srow flat"><span class="si">' + icon("cloud", 22) + '</span><span class="g"><b>Синхронизация включена: ' + backendName() + '</b><small>Последняя: ' + fmtSyncAt(SM.at) + (SM.dirty ? " · есть неотправленные изменения" : "") + "</small></span></div>" +
       (SM.err ? '<div class="srow flat"><span class="g"><b>Ошибка</b><small>' + esc(SM.err) + "</small></span></div>" : "") + "</div>" +
       '<button class="btn primary" data-act="sync-now">Синхронизировать сейчас</button>' +
-      '<div class="sub" style="margin:10px 4px">Изменения уходят в облако через несколько секунд, а при открытии приложения подтягиваются оттуда. ' + (GH ? "На другом устройстве подключи тот же токен GitHub." : "На другом устройстве открой этого же бота под тем же аккаунтом Telegram.") + '</div>' +
+      '' +
       '<div class="sgl">Принудительно</div><div class="sgroup">' +
       '<button class="srow" data-act="cl-push"><span class="g"><b>Отправить в облако с этого устройства</b><small>Облачная копия будет заменена</small></span>' + icon("right", 18) + "</button>" +
       '<button class="srow" data-act="cl-pull"><span class="g"><b>Загрузить из облака сюда</b><small>Данные на этом устройстве будут заменены</small></span>' + icon("right", 18) + "</button></div>";
@@ -3167,7 +3167,7 @@ function viewBackup() {
     '<input id="imp-file" type="file" accept=".json,.txt,application/json,text/plain" class="vh" tabindex="-1">' +
     '<textarea id="imp-txt" rows="3" placeholder="…или вставь сюда скопированный текст копии"></textarea>' +
     '<button class="btn soft" data-act="imp-text">Восстановить из текста</button></div>' +
-    '<div class="sub" style="margin:12px 4px">Что хранится в копии: тренировки, история, питание, замеры, цели и настройки. Фото упражнений остаются только на устройстве, где они добавлены.</div>';
+    '';
   return h;
 }
 
@@ -3274,7 +3274,7 @@ function viewAccount() {
       '<label class="field-l" for="fb-url">Адрес базы</label><input id="fb-url" placeholder="https://…firebaseio.com" autocomplete="off" value="' + esc(sharedBase()) + '">' +
       '<label class="field-l" for="fb-key">Web API key</label><input id="fb-key" placeholder="AIza…" autocomplete="off" value="' + esc(fbKey()) + '">' +
       '<button class="btn primary" data-act="fb-cfg">Сохранить</button></div>' +
-      '<div class="sub" style="margin:8px 4px">Чтобы облако сразу работало у всех, кто открывает приложение, пришли мне адрес и ключ: я вставлю их в код.</div>';
+      '';
     return h;
   }
   if (!FBA) {
@@ -3290,7 +3290,7 @@ function viewAccount() {
   h += '<div class="sgroup"><div class="srow flat"><span class="si">' + icon("users", 22) + '</span><span class="g"><b>' + esc(FBA.email) + "</b><small>Последняя синхронизация: " + fmtSyncAt(SM.at) + (SM.dirty ? " · есть несохранённые изменения" : "") + "</small></span></div>" +
     (SM.err ? '<div class="srow flat"><span class="g"><b>Ошибка</b><small>' + esc(SM.err) + "</small></span></div>" : "") + "</div>" +
     '<button class="btn primary" data-act="sync-now">Синхронизировать сейчас</button>' +
-    '<div class="sub" style="margin:10px 4px">Изменения уходят в облако через несколько секунд после правки и подгружаются при открытии приложения. Войди в этот же аккаунт на другом устройстве, и данные будут там.</div>' +
+    '' +
     '<button class="btn danger" data-act="fb-out">Выйти из аккаунта</button>';
   return h;
 }
@@ -3560,7 +3560,7 @@ function viewRegular() {
   h += '<div class="sec"><h2>Отчёт за неделю</h2></div><div class="card"><div class="sub" style="margin-bottom:6px">' + fmtDay(w.a) + " – " + fmtDay(w.T) + `</div><div class="b">Что получается</div><div class="sub" style="margin-bottom:8px">${esc(rp.goodTxt)}</div><div class="b">Что мешает</div><div class="sub" style="margin-bottom:8px">${esc(rp.badTxt)}</div><div class="b">Одно изменение на следующую неделю</div><div class="sub">${esc(rp.one)}</div></div>`;
   h += '<div class="sec"><h2>Отметки дня</h2></div><div class="seg" role="group" aria-label="День"><button class="' + (S.regDay === "y" ? "" : "on") + '" data-act="rg-day" data-d="t">Сегодня</button><button class="' + (S.regDay === "y" ? "on" : "") + '" data-act="rg-day" data-d="y">Вчера</button></div>';
   h += '<div class="card"><label class="field-l" for="sl-h">Сколько часов спал(а) ночью</label><div class="row" style="margin-top:0"><input id="sl-h" inputmode="decimal" placeholder="7,5" value="' + (X().sleep[x] ? String(X().sleep[x]).replace(".", ",") : "") + '"><button class="btn soft" style="margin:0;width:auto;flex:none" data-act="rg-sleep">Сохранить</button></div></div>';
-  h += '<div class="sub" style="margin:8px 4px">Отчёт собирается на экране. Если уведомления включены, в воскресенье вечером и в понедельник утром вверху «Дневника» появится напоминание его открыть. Сообщения в Telegram сам бот отправить не может, пока у приложения нет собственного сервера.</div>';
+  h += '';
   return h;
 }
 
@@ -3672,7 +3672,7 @@ function kvFill() {
 
 
 /* ---------------- общая статистика (кэш по версии данных) ---------------- */
-let _stV = -1, _st = null;
+let _stV = "", _st = null;
 function runsOf(days) {
   const s = days.slice().sort(); let best = 0, cur = 0, prev = null;
   for (const d of s) { cur = prev && daysBetween(prev, d) === 1 ? cur + 1 : 1; if (cur > best) best = cur; prev = d; }
@@ -3681,7 +3681,8 @@ function runsOf(days) {
 }
 const weekMon = d => addDays(d, -((new Date(d + "T00:00:00").getDay() + 6) % 7));
 function stats() {
-  if (_st && _stV === DV) return _st;
+  const ck = DV + "|" + D.sessions.length + "|" + N().log.length + "|" + D.bodyweight.length + "|" + ((N().log[N().log.length - 1] || {}).id || "");
+  if (_st && _stV === ck) return _st;
   const T = today(), fin = D.sessions.filter(s => s.finishedAt != null), H = history();
   const fdays = [...new Set(N().log.map(x => x.day))].sort(), fr = runsOf(fdays);
   let regWeek = 0;
@@ -3706,7 +3707,7 @@ function stats() {
     bioN: D.bodyweight.length + (B().entries || []).length, goalsDone: (B().done || []).length,
     bw: bwNow ? { v: bwNow.weight, d: bwOld && bwOld !== bwNow ? Math.round((bwNow.weight - bwOld.weight) * 10) / 10 : null } : null
   };
-  _stV = DV; return _st;
+  _stV = ck; return _st;
 }
 
 /* ---------------- достижения ---------------- */
@@ -3742,7 +3743,15 @@ const ACH = [
 ];
 function achList() {
   const s = stats(), p = X().prof || {}, c = Object.assign({}, s, { ret: !!(X().ret && X().ret.done), prof: !!X().prof, fr: p.fr || 0, ms: p.ms || 0 });
-  return ACH.map(([id, ic, name, desc, f]) => { const [v, g] = f(c); return { id, ic, name, desc, v: Math.min(v, g), g, done: v >= g }; });
+  const x = X(), ad = x.achDone || (x.achDone = {}); let ch = false;
+  const L = ACH.map(([id, ic, name, desc, f]) => {
+    const [v, g] = f(c);
+    if (v >= g && !ad[id]) { ad[id] = today(); ch = true; }
+    const done = !!ad[id];
+    return { id, ic, name, desc, v: done ? g : Math.min(v, g), g, done, day: ad[id] || null };
+  });
+  if (ch && P.mode === "local") persist();
+  return L;
 }
 function achNew() { const x = X(); if (!Array.isArray(x.achSeen)) x.achSeen = []; return achList().filter(a => a.done && !x.achSeen.includes(a.id)); }
 function achMarkSeen() { X().achSeen = achList().filter(a => a.done).map(a => a.id); persist(); }
@@ -3750,7 +3759,7 @@ function viewAch() {
   const L = achList(), n = L.filter(a => a.done).length;
   let h = `<div class="ringcard"><div class="rwrap">${ringSvg(n, L.length)}<div class="rmid"><b>${n}</b><span>из ${L.length}</span></div></div><div class="rbars"><div class="sub" style="line-height:1.5">Достижения открываются сами по твоим данным: тренировкам, рекордам, дневнику питания и общению.</div></div></div>`;
   const row = a => `<div class="ach ${a.done ? "on" : "off"}"><span class="ai">${icon(a.done ? a.ic : "lock", 22)}</span><div class="g"><div class="n">${esc(a.name)}</div><div class="sub">${esc(a.desc)}</div>` +
-    (a.done ? "" : (a.g > 1 ? `<div class="pbar"><i style="width:${Math.round(a.v / a.g * 100)}%"></i></div><div class="sub" style="margin-top:3px">${fmtNum(a.v)} из ${fmtNum(a.g)}</div>` : "")) + "</div></div>";
+    (a.done ? (a.day ? `<div class="sub" style="margin-top:3px">Открыто ${fmtDay(a.day)}</div>` : "") : (a.g > 1 ? `<div class="pbar"><i style="width:${Math.round(a.v / a.g * 100)}%"></i></div><div class="sub" style="margin-top:3px">${fmtNum(a.v)} из ${fmtNum(a.g)}</div>` : "")) + "</div></div>";
   const done = L.filter(a => a.done), todo = L.filter(a => !a.done);
   if (done.length) h += '<div class="sec"><h2>Открыто</h2></div>' + done.map(row).join("");
   if (todo.length) h += '<div class="sec"><h2>Впереди</h2></div>' + todo.map(row).join("");
@@ -3972,7 +3981,7 @@ function viewFriends() {
   }
   if (FR.list === null && !FR.loading) frLoad();
   h += `<div class="card"><div class="sub">Твой код для друзей</div><div class="row" style="margin-top:4px;align-items:center"><div class="b" style="font-size:26px;letter-spacing:.08em;flex:1;font-variant-numeric:tabular-nums">${esc(p.code)}</div><button class="chipb" data-act="fr-copy">${icon("copy", 15)} Скопировать</button></div>` +
-    `<div class="sub" style="margin-top:6px">Отправь код другу любым способом. Он введёт его в этом же разделе.</div></div>`;
+    `</div>`;
   h += '<div class="card"><div class="b">Добавить друга</div><div class="row"><input id="fr-code" autocomplete="off" autocapitalize="characters" placeholder="Код друга, например K7MQ-4XD2" style="text-transform:uppercase"><button class="btn primary" style="margin:0;width:auto;flex:none" data-act="fr-find">Найти</button></div>' +
     (FR.found ? `<div class="mitem" style="margin-top:8px"><div class="g"><div class="n">${esc(FR.found.name)}</div><div class="sub">Отправить запрос в друзья?</div></div><button class="btn primary" style="margin:0;width:auto;flex:none;min-height:40px" data-act="fr-req">Отправить</button></div>` : "") + "</div>";
   if (FR.err) h += '<div class="warn">' + esc(FR.err) + '</div><button class="btn soft" data-act="sh-rules">Скопировать правила</button>';
@@ -3983,7 +3992,7 @@ function viewFriends() {
   else h += '<div class="sgroup">' + FR.list.map(f => `<button class="srow" data-act="fr-open" data-id="${esc(f.id)}"><span class="g"><b>${esc(f.name)}</b><small>${f.ok ? (f.prog ? `${f.prog.tot || 0} тренировок · серия питания ${f.prog.fs || 0}` : "прогресс пока не опубликован") : "ждёт подтверждения"}</small></span>${FR.un[f.id] ? `<span class="badge">${FR.un[f.id]}</span>` : ""}${icon("right", 18)}</button>`).join("") + "</div>";
   h += '<div class="sec"><h2>Мой профиль</h2></div><div class="card"><label class="field-l" for="fr-name">Имя</label><div class="row" style="margin-top:0"><input id="fr-name" maxlength="30" value="' + esc(p.name) + '" autocomplete="off"><button class="btn soft" style="margin:0;width:auto;flex:none" data-act="fr-create">Сохранить</button></div>' +
     `<div class="srow flat" style="padding:10px 0;min-height:0"><span class="g"><b>Показывать друзьям вес</b><small>Текущий вес и изменение за месяц. Выключено по умолчанию.</small></span>${sw(!!p.w, "fr-w", "Показывать вес")}</div>` +
-    '<div class="sub">Друзьям видны: число тренировок, рекорды, лучшие подъёмы, серия питания, достижения. Еда и замеры не показываются.</div></div>';
+    '</div>';
   return h;
 }
 function viewFriend() {
@@ -4004,7 +4013,7 @@ function viewFriend() {
   }
   h += '<div class="sec"><h2>Сообщения</h2></div><div class="card" style="padding:8px"><div id="chat-list" class="chat">' + chatHtml() + '</div><div class="row" style="margin-top:6px"><input id="chat-in" maxlength="500" autocomplete="off" placeholder="Сообщение"><button class="btn primary" style="margin:0;width:auto;flex:none;padding:0 16px" data-act="fr-send" aria-label="Отправить">' + icon("send", 20) + '</button></div>' +
     (FR.cerr ? `<div class="sub" style="margin-top:6px;color:var(--danger)">${esc(FR.cerr)}</div>` : "") + "</div>" +
-    '<div class="sub" style="margin:4px">Новые сообщения подгружаются, пока открыт чат, и при запуске приложения. Уведомлений вне приложения нет.</div>' +
+    '' +
     '<button class="btn danger" data-act="fr-del" data-id="' + esc(f.id) + '">Удалить из друзей</button>';
   return h;
 }
