@@ -1447,7 +1447,7 @@ document.querySelectorAll(".tabs button").forEach(b => { b.onclick = () => showT
 
 /* ---------- действия ---------- */
 const nextName = () => { const L = "АБВГДЕЖЗИК"; const n = (S.workouts || []).length; return "Тренировка " + (L[n] || n + 1); };
-const APP_VERSION = "1.5.2";
+const APP_VERSION = "1.5.5";
 ICON.palette = '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/>';
 ICON.bell = '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"/>';
 ICON.download = '<path d="M6 3h8l4 4v14H6zM14 3v4h4M12 10v6M9.5 13.5L12 16l2.5-2.5"/>';
@@ -2751,7 +2751,7 @@ function viewGoalSheet() {
 }
 
 /* ---- действия ---- */
-const kvOpen = (ctx, meal) => { S.kvp = { ctx, q: "", online: [], sel: null, scan: false, manual: false, msg: "", code: "", draft: null, meal: meal || autoMeal() }; render(); };
+const kvOpen = (ctx, meal) => { S.kvp = { ctx, q: "", online: [], sel: null, scan: false, manual: false, msg: "", code: "", draft: null, meal: meal || autoMeal(), fixedMeal: !!meal }; render(); };
 const kvClose = () => { stopScan(); S.kvp = null; render(); };
 function kvAddEntry(p, g) {
   if (S.kvp.ctx === "calc") S.calc.rows.push({ pid: p.id, g });
@@ -2787,7 +2787,7 @@ Object.assign(actions, {
   "kv-quick": b => {
     const x = recentFoods()[+b.dataset.i]; if (!x) return;
     const p = N().prods.find(q => q.name === x.name) || keepProd({ name: x.name, k: r1(x.k / x.g * 100), b: r1(x.b / x.g * 100), j: r1(x.j / x.g * 100), u: r1(x.u / x.g * 100), code: "" });
-    kvOpen("log", autoMeal()); S.kvp.sel = p; kvMem(S.kvp); render(); kvFill();
+    kvOpen("log"); S.kvp.sel = p; kvMem(S.kvp); render(); kvFill();
   },
   "kv-sel": b => {
     const k = S.kvp, src = b.dataset.src, p = src === "l" ? N().prods.slice().reverse()[+b.dataset.i] : src === "s" ? (k.sh || [])[+b.dataset.i] : k.online[+b.dataset.i];
@@ -3661,7 +3661,7 @@ function extraRem(out) {
   if (r && r.train === T && !D.sessions.some(x => x.finishedAt != null && x.day === T) && dis.rt !== T) out.push({ k: "rt", text: "Сегодня день возвращения к тренировкам. Выбери любую, даже короткую.", btn: null });
 }
 function kvMem(k) {
-  if (!memOn() || !k.sel || k.ctx !== "log") return;
+  if (!memOn() || !k.sel || k.ctx !== "log" || k.fixedMeal) return;
   const o = foodStats().find(x => x.name === k.sel.name); if (o && o.n >= 2) k.meal = o.fav;
 }
 function kvFill() {
@@ -3832,8 +3832,6 @@ function viewStreak() {
   const s = stats(), T = today();
   let h = "";
   const doneToday = s.fLast === T;
-  h += `<div class="card streak"><span class="fl ${s.fCur ? "on" : ""}">${icon("flame", 26)}</span><div class="g" style="flex:1;min-width:0"><div class="b" style="font-size:18px">${s.fCur ? s.fCur + " " + plural(s.fCur, DAYS_F) + " подряд" : "Серия не начата"}</div>` +
-    `<div class="sub">${s.fCur ? (doneToday ? "Сегодня записано, так держать." : "Запиши сегодня, чтобы серия продолжилась.") : "Запиши любой приём пищи, и серия начнётся."} Лучшая: ${s.fBest} · всего дней: ${s.foodDays}</div></div></div>`;
   const r = retActive();
   if (r) {
     const d0 = r.start, d1 = addDays(r.start, 1), lab = d => d === T ? "Сегодня" : d === addDays(T, -1) ? "Вчера" : d === addDays(T, 1) ? "Завтра" : fmtDay(d);
