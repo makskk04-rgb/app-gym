@@ -1447,7 +1447,7 @@ document.querySelectorAll(".tabs button").forEach(b => { b.onclick = () => showT
 
 /* ---------- действия ---------- */
 const nextName = () => { const L = "АБВГДЕЖЗИК"; const n = (S.workouts || []).length; return "Тренировка " + (L[n] || n + 1); };
-const APP_VERSION = "1.5.5";
+const APP_VERSION = "1.6.0";
 ICON.palette = '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1 .8-1.7 1.8-1.7H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/>';
 ICON.bell = '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0"/>';
 ICON.download = '<path d="M6 3h8l4 4v14H6zM14 3v4h4M12 10v6M9.5 13.5L12 16l2.5-2.5"/>';
@@ -3787,17 +3787,17 @@ function foodAdd(name, meal, g) {
   persist();
 }
 function wkSuggest() {
-  const ws = (S.workouts || []).filter(w => !w.archived); if (!ws.length) return null;
-  const T = today(), wd = new Date().getDay(), since = addDays(T, -120);
-  const fin = D.sessions.filter(s => s.finishedAt != null && s.day >= since);
-  const byDay = {}; fin.filter(s => new Date(s.day + "T00:00:00").getDay() === wd).forEach(s => { byDay[s.workoutId] = (byDay[s.workoutId] || 0) + 1; });
-  const top = Object.entries(byDay).sort((a, b) => b[1] - a[1])[0];
-  if (top && top[1] >= 2) { const w = ws.find(x => x.id === top[0]); if (w) return { w, why: `Обычно в ${["воскресенье", "понедельник", "вторник", "среду", "четверг", "пятницу", "субботу"][wd]} ты делаешь именно эту тренировку.` }; }
-  if (fin.length >= 2) {
-    const ago = w => w.last_day ? daysBetween(w.last_day, T) : 999, w = ws.slice().sort((a, b) => ago(b) - ago(a))[0];
-    return { w, why: ago(w) >= 999 ? "Ещё не пробовал(а): самое время начать." : `Давно не было: ${ago(w)} ${plural(ago(w), DAYS_F)} назад.` };
+  const ws = (S.workouts || []).filter(w => !w.archived); if (!ws.length) return [];
+  const T = today(), wdN = ["воскресенье", "понедельник", "вторник", "среду", "четверг", "пятницу", "субботу"][new Date().getDay()];
+  const fin = D.sessions.filter(s => s.finishedAt != null), by = {}; let weeks = 0;
+  for (let k = 1; k <= 6; k++) {
+    const d = addDays(T, -7 * k), on = fin.filter(s => s.day === d); if (on.length) weeks++;
+    new Set(on.map(s => s.workoutId)).forEach(id => { by[id] = (by[id] || 0) + 1; });
   }
-  return null;
+  if (weeks < 3) return [];
+  const list = Object.entries(by).filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([id]) => ws.find(w => w.id === id)).filter(Boolean);
+  if (!list.length) { const top = Object.entries(by).sort((a, b) => b[1] - a[1])[0], w = top && ws.find(x => x.id === top[0]); if (w) list.push(w); }
+  return list.map(w => ({ w, why: `Обычно в ${wdN} ты делаешь эту тренировку.` }));
 }
 function wkPrefDays() {
   const c = [0, 0, 0, 0, 0, 0, 0]; D.sessions.filter(s => s.finishedAt != null && s.day >= addDays(today(), -120)).forEach(s => c[new Date(s.day + "T00:00:00").getDay()]++);
@@ -3805,12 +3805,13 @@ function wkPrefDays() {
 }
 function viewForYou() {
   if (!memOn() || S.session) return "";
-  const T = today(), done = D.sessions.find(s => s.finishedAt != null && s.day === T), sg = wkSuggest();
-  const rr = X().ret;
-  if (done) return `<div class="card" style="display:flex;gap:10px;align-items:center"><span style="color:var(--accent);display:flex">${icon("trophy", 22)}</span><div class="g" style="flex:1"><div class="b">Сегодня тренировка уже есть</div><div class="sub">${esc(done.name)}. Хорошая работа, отдыхай и ешь.</div></div></div>`;
-  if (!sg) return "";
-  const retDay = rr && !rr.done && rr.train === T ? " Сегодня день возвращения к тренировкам." : "";
-  return `<div class="card foryou"><div class="sub" style="text-transform:uppercase;letter-spacing:.06em;font-size:11px;font-weight:700">Для тебя сегодня</div><div class="b" style="font-size:18px;margin-top:2px">${esc(sg.w.name)}</div><div class="sub" style="margin-top:2px">${esc(sg.why + retDay)}</div><div class="row" style="margin-top:8px"><button class="btn primary" style="margin:0;min-height:46px" data-act="start" data-id="${esc(sg.w.id)}">${icon("play", 18)} Начать в один тап</button><button class="btn soft" style="margin:0;width:auto;flex:none;min-height:46px" data-act="open" data-id="${esc(sg.w.id)}">Состав</button></div></div>`;
+  const T = today(); if ((SETD().dis || {}).fy === T) return "";
+  if (D.sessions.some(s => s.finishedAt != null && s.day === T)) return "";
+  const sg = wkSuggest(); if (!sg.length) return "";
+  const rr = X().ret, retDay = rr && !rr.done && rr.train === T ? " Сегодня день возвращения к тренировкам." : "";
+  return `<div class="card foryou"><div class="sub" style="text-transform:uppercase;letter-spacing:.06em;font-size:11px;font-weight:700">Сегодня по твоему графику</div>` +
+    sg.map(x => `<div style="margin-top:8px"><div class="b" style="font-size:18px">${esc(x.w.name)}</div><div class="sub" style="margin-top:2px">${esc(x.why + retDay)}</div><div class="row" style="margin-top:8px"><button class="btn primary" style="margin:0;min-height:46px" data-act="start" data-id="${esc(x.w.id)}">${icon("play", 18)} Начать</button><button class="btn soft" style="margin:0;width:auto;flex:none;min-height:46px" data-act="open" data-id="${esc(x.w.id)}">Состав</button></div></div>`).join("") +
+    '<button class="link" style="margin-top:8px" data-act="fy-skip">Пропустить сегодня</button></div>';
 }
 function viewFoodChips() {
   if (!memOn() || (S.kvDay || today()) !== today()) return "";
@@ -3852,7 +3853,7 @@ function viewStreak() {
 }
 function viewRet() {
   const d = S.retDraft || (S.retDraft = { train: null, foods: [], meals: 1 }), T = today(), pref = wkPrefDays(), nd = SETD().notif.w.days || [];
-  const sg = wkSuggest();
+  const sg = wkSuggest()[0] || null;
   const days = Array.from({ length: 6 }, (_, i) => addDays(T, i));
   const good = x => { const wd = new Date(x + "T00:00:00").getDay(); return pref ? pref[wd] : nd.includes(wd); };
   if (!d.train) d.train = days.find(x => good(x) && x > T) || days.find(good) || addDays(T, 1);
@@ -4018,6 +4019,7 @@ function viewFriend() {
 
 Object.assign(actions, {
   "ach-seen": () => { achMarkSeen(); render(); },
+  "fy-skip": () => { const d = SETD().dis; d.fy = today(); d.w = today(); persist(); render(); },
   "mem-toggle": () => { SETD().memOff = !SETD().memOff; persist(); render(); },
   "fq-add": b => { foodAdd(b.dataset.n, b.dataset.m, +b.dataset.g); retCheck(); render(); },
   "ret-open": () => { S.retDraft = null; S.retSheet = true; render(); },
